@@ -7,6 +7,7 @@ import (
 	box "github.com/sagernet/sing-box"
 	_ "github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
+	_ "golang.org/x/mobile/bind"
 )
 
 // SocketProtector 对应 Java 层的回调接口 (gomobile 生成)
