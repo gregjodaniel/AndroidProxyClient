@@ -259,54 +259,96 @@ class MainActivity : AppCompatActivity() {
 
         dialogBinding.btnPasteClipboard.setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clipData = clipboard.primaryClip
-            if (clipData != null && clipData.itemCount > 0) {
-                dialogBinding.etSubscriptionContent.setText(clipData.getItemAt(0).text.toString())
+            val clip = clipboard.primaryClip
+            if (clip != null && clip.itemCount > 0) {
+                val clipText = clip.getItemAt(0).text?.toString().orEmpty()
+                dialogBinding.etInput.setText(clipText)
+            } else {
+                Toast.makeText(this, "剪贴板为空", Toast.LENGTH_SHORT).show()
             }
         }
 
         dialogBinding.btnConfirmImport.setOnClickListener {
-            val content = dialogBinding.etSubscriptionContent.text.toString().trim()
+            val content = dialogBinding.etInput.text?.toString().orEmpty().trim()
             if (content.isEmpty()) {
-                Toast.makeText(this, "请输入或粘贴订阅内容/链接", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "请输入或粘贴订阅链接/节点链接", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            dialogBinding.progressBar.visibility = View.VISIBLE
-            dialogBinding.btnConfirmImport.isEnabled = false
-
-            lifecycleScope.launch {
-                val nodes = withContext(Dispatchers.IO) {
-                    NodeUriParser.parseSubscription(content)
-                }
-
-                dialogBinding.progressBar.visibility = View.GONE
-                dialogBinding.btnConfirmImport.isEnabled = true
-
-                if (nodes.isNotEmpty()) {
-                    repository.addNodes(nodes)
-                    Toast.makeText(this@MainActivity, "成功导入 ${nodes.size} 个节点", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                } else {
-                    Toast.makeText(this@MainActivity, "未能识别有效节点,请检查订阅内容或链接", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-
-        dialogBinding.btnCancel.setOnClickListener {
             dialog.dismiss()
+            processImportContent(content)
         }
 
         dialog.show()
     }
 
+    private fun processImportContent(content: String) {
+        lifecycleScope.launch {
+            if (content.startsWith("http://", ignoreCase = true) || content.startsWith("https://", ignoreCase = true)) {
+                Toast.makeText(this@MainActivity, "正在下载并解析订阅 (支持 Clash/V2Ray/SingBox)...", Toast.LENGTH_SHORT).show()
+                try {
+                    val nodes = withContext(Dispatchers.IO) {
+                        NodeUriParser.fetchSubscription(content)
+                    }
+                    if (nodes.isNotEmpty()) {
+                        repository.addNodes(nodes)
+                        Toast.makeText(this@MainActivity, "成功导入 ${nodes.size} 个节点", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showErrorDialog("解析失败", "未能从该订阅链接中解析出有效节点，请确认订阅是否包含节点或尝试直接复制订阅内容/节点链接导入。")
+                    }
+                } catch (e: Exception) {
+                    showErrorDialog("订阅拉取失败", "错误信息: ${e.localizedMessage ?: e.message}")
+                }
+            } else {
+                val nodes = NodeUriParser.parseSubscription(content)
+                if (nodes.isNotEmpty()) {
+                    repository.addNodes(nodes)
+                    Toast.makeText(this@MainActivity, "成功导入 ${nodes.size} 个节点", Toast.LENGTH_SHORT).show()
+                } else {
+                    val singleNode = NodeUriParser.parseUri(content)
+                    if (singleNode != null) {
+                        repository.addNodes(listOf(singleNode))
+                        Toast.makeText(this@MainActivity, "成功导入节点: ${singleNode.tag}", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showErrorDialog("节点识别失败", "未识别到有效的配置。\n支持格式：\n• Clash YAML (proxies)\n• SingBox / Xray JSON\n• Base64 订阅\n• vless://, vmess://, hy2://, tuic://, ss://, trojan://")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showErrorDialog(title: String, message: String) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("确定", null)
+            .show()
+    }
+
+    private fun runSpeedTest() {
+        val nodes = repository.nodeList.value
+        if (nodes.isEmpty()) {
+            Toast.makeText(this, "列表暂无节点，请先导入节点", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Toast.makeText(this, "正在进行并发测速...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val results = withContext(Dispatchers.IO) {
+                LatencyTester.testAllNodes(nodes)
+            }
+            repository.updateLatencies(results)
+            Toast.makeText(this@MainActivity, "测速完成", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun showDeleteNodeDialog(tag: String) {
         MaterialAlertDialogBuilder(this)
             .setTitle("删除节点")
-            .setMessage("确定要删除节点 \"$tag\" 吗?")
+            .setMessage("确定要删除节点【$tag】吗？")
             .setPositiveButton("删除") { _, _ ->
                 repository.deleteNode(tag)
-                Toast.makeText(this, "已删除节点", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("取消", null)
             .show()
@@ -315,32 +357,12 @@ class MainActivity : AppCompatActivity() {
     private fun showClearAllDialog() {
         MaterialAlertDialogBuilder(this)
             .setTitle("清空所有节点")
-            .setMessage("确定要清空全部已导入的节点吗?")
+            .setMessage("确定要清空所有节点吗？此操作不可撤销。")
             .setPositiveButton("清空") { _, _ ->
                 repository.clearAllNodes()
                 Toast.makeText(this, "已清空所有节点", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("取消", null)
             .show()
-    }
-
-    private fun runSpeedTest() {
-        val nodes = repository.nodeList.value
-        if (nodes.isEmpty()) {
-            Toast.makeText(this, "当前无节点可测速", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        Toast.makeText(this, "开始测试全部节点延迟...", Toast.LENGTH_SHORT).show()
-        binding.btnSpeedTest.isEnabled = false
-
-        lifecycleScope.launch {
-            val results = withContext(Dispatchers.IO) {
-                LatencyTester.testBatch(nodes)
-            }
-            repository.updateLatencies(results)
-            binding.btnSpeedTest.isEnabled = true
-            Toast.makeText(this@MainActivity, "测速完成", Toast.LENGTH_SHORT).show()
-        }
     }
 }
