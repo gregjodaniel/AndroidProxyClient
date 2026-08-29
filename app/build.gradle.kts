@@ -11,8 +11,8 @@ android {
         applicationId = "com.proxy.client"
         minSdk = 24
         targetSdk = 34
-        versionCode = 13
-        versionName = "1.1.2"
+        versionCode = 14
+        versionName = "1.1.3"
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86_64"))
