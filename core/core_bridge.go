@@ -29,7 +29,7 @@ func StartProxy(configJSON string, tunFd int) error {
 	var opts option.Options
 	err := json.Unmarshal([]byte(configJSON), &opts)
 	if err != nil {
-		return fmt.Errorf("配置解析错误: %w", err)
+		return fmt.Errorf("配置JSON解析失败: %v", err)
 	}
 
 	boxInst, err := box.New(box.Options{
@@ -37,12 +37,12 @@ func StartProxy(configJSON string, tunFd int) error {
 		Options: opts,
 	})
 	if err != nil {
-		return fmt.Errorf("SingBox内核初始化失败: %w", err)
+		return fmt.Errorf("SingBox配置初始化失败: %v", err)
 	}
 
 	err = boxInst.Start()
 	if err != nil {
-		return fmt.Errorf("SingBox内核启动失败: %w", err)
+		return fmt.Errorf("SingBox启动失败: %v", err)
 	}
 	instance = boxInst
 

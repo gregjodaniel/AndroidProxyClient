@@ -6,6 +6,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -35,11 +36,11 @@ class SingBoxEngine(
             isRunning.set(true)
             _state.value = EngineState.RUNNING
         } catch (t: Throwable) {
-            val errMsg = t.message ?: t.toString()
+            val errMsg = getRootErrorMessage(t)
             Log.e(TAG, "启动内核失败: $errMsg", t)
             _state.value = EngineState.ERROR
             isRunning.set(false)
-            throw EngineException("启动内核失败: $errMsg", t)
+            throw EngineException(errMsg, t)
         }
     }
 
@@ -52,10 +53,10 @@ class SingBoxEngine(
             _state.value = EngineState.STOPPED
             _trafficStats.value = TrafficStats()
         } catch (t: Throwable) {
-            val errMsg = t.message ?: t.toString()
+            val errMsg = getRootErrorMessage(t)
             Log.e(TAG, "停止内核失败: $errMsg", t)
             _state.value = EngineState.ERROR
-            throw EngineException("停止内核失败: $errMsg", t)
+            throw EngineException(errMsg, t)
         }
     }
 
@@ -117,5 +118,17 @@ class SingBoxEngine(
             }
         }
         return null
+    }
+
+    private fun getRootErrorMessage(t: Throwable): String {
+        var current: Throwable? = t
+        while (current is InvocationTargetException || (current?.cause != null && current !is EngineException)) {
+            current = if (current is InvocationTargetException) {
+                current.targetException ?: current.cause
+            } else {
+                current.cause
+            }
+        }
+        return current?.message ?: current?.toString() ?: t.toString()
     }
 }

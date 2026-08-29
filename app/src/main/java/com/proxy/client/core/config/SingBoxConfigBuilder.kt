@@ -82,38 +82,33 @@ class SingBoxConfigBuilder {
         })
         root.put("outbounds", finalOutbounds)
 
+        val finalOutbound = when (routeMode) {
+            RouteMode.DIRECT -> "direct-out"
+            RouteMode.GLOBAL, RouteMode.RULE -> activeOutboundTag
+        }
+
         root.put("route", JSONObject().apply {
             put("auto_detect_interface", true)
+            put("final", finalOutbound)
             val rules = JSONArray().apply {
                 put(JSONObject().apply {
                     put("port", JSONArray().put(53))
                     put("outbound", "dns-out")
                 })
                 put(JSONObject().apply {
-                    put("protocol", "dns")
+                    put("protocol", JSONArray().put("dns"))
                     put("outbound", "dns-out")
                 })
-                put(JSONObject().apply {
-                    put("ip_cidr", JSONArray().apply {
-                        put("10.0.0.0/8")
-                        put("172.16.0.0/12")
-                        put("192.168.0.0/16")
-                        put("127.0.0.0/8")
+                if (routeMode == RouteMode.RULE) {
+                    put(JSONObject().apply {
+                        put("ip_cidr", JSONArray().apply {
+                            put("10.0.0.0/8")
+                            put("172.16.0.0/12")
+                            put("192.168.0.0/16")
+                            put("127.0.0.0/8")
+                        })
+                        put("outbound", "direct-out")
                     })
-                    put("outbound", "direct-out")
-                })
-
-                when (routeMode) {
-                    RouteMode.RULE, RouteMode.GLOBAL -> {
-                        put(JSONObject().apply {
-                            put("outbound", activeOutboundTag)
-                        })
-                    }
-                    RouteMode.DIRECT -> {
-                        put(JSONObject().apply {
-                            put("outbound", "direct-out")
-                        })
-                    }
                 }
             }
             put("rules", rules)
