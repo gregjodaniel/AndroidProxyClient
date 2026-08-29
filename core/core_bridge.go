@@ -16,7 +16,7 @@ import (
 var (
 	mu       sync.Mutex
 	instance *box.Box
-	tunKey   *engine.Key
+	started  bool
 )
 
 // StartProxy starts the Sing-Box core and attaches tun2socks to the Android VPN fd
@@ -52,8 +52,9 @@ func StartProxy(configJSON string, tunFd int) error {
 			Proxy:  "socks5://127.0.0.1:2080",
 			MTU:    1500,
 		}
-		engine.Start(key)
-		tunKey = key
+		engine.Insert(key)
+		engine.Start()
+		started = true
 	}
 
 	return nil
@@ -67,9 +68,9 @@ func StopProxy() error {
 }
 
 func stopInternal() error {
-	if tunKey != nil {
+	if started {
 		engine.Stop()
-		tunKey = nil
+		started = false
 	}
 	if instance != nil {
 		err := instance.Close()
