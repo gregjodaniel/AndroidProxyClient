@@ -1,133 +1,80 @@
 package corebridge
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"sync"
 
-	"github.com/sagernet/sing-box/experimental/libbox"
+	box "github.com/sagernet/sing-box"
 	_ "github.com/sagernet/sing-box/include"
+	"github.com/sagernet/sing-box/option"
 	_ "golang.org/x/mobile/bind"
+	"github.com/xjasonlyu/tun2socks/v2/engine"
 )
 
-type PlatformBridge interface {
-	OpenTun() (int32, error)
-	Protect(fd int32) bool
-}
+var (
+	mu       sync.Mutex
+	instance *box.Box
+	tunKey   *engine.Key
+)
 
-type EngineWrapper struct {
-	server *libbox.CommandServer
-	bridge PlatformBridge
-}
+// StartProxy starts the Sing-Box core and attaches tun2socks to the Android VPN fd
+func StartProxy(configJSON string, tunFd int) error {
+	mu.Lock()
+	defer mu.Unlock()
 
-func NewEngine(bridge PlatformBridge) (*EngineWrapper, error) {
-	e := &EngineWrapper{
-		bridge: bridge,
-	}
-	server, err := libbox.NewCommandServer(e, e)
+	stopInternal()
+
+	var opts option.Options
+	err := json.Unmarshal([]byte(configJSON), &opts)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("配置解析错误: %w", err)
 	}
-	e.server = server
-	return e, nil
-}
 
-// CommandServerHandler
-func (e *EngineWrapper) ServiceStop() error {
-	return nil
-}
+	boxInst, err := box.New(box.Options{
+		Context: context.Background(),
+		Options: opts,
+	})
+	if err != nil {
+		return fmt.Errorf("SingBox内核初始化失败: %w", err)
+	}
 
-func (e *EngineWrapper) ServiceReload() error {
-	return nil
-}
+	err = boxInst.Start()
+	if err != nil {
+		return fmt.Errorf("SingBox内核启动失败: %w", err)
+	}
+	instance = boxInst
 
-func (e *EngineWrapper) GetSystemProxyStatus() (*libbox.SystemProxyStatus, error) {
-	return nil, nil
-}
-
-func (e *EngineWrapper) SetSystemProxyEnabled(enabled bool) error {
-	return nil
-}
-
-func (e *EngineWrapper) WriteDebugMessage(message string) {
-}
-
-// PlatformInterface
-func (e *EngineWrapper) LocalDNSTransport() libbox.LocalDNSTransport {
-	return nil
-}
-
-func (e *EngineWrapper) UsePlatformAutoDetectInterfaceControl() bool {
-	return true
-}
-
-func (e *EngineWrapper) AutoDetectInterfaceControl(fd int32) error {
-	if e.bridge != nil {
-		if !e.bridge.Protect(fd) {
-			return fmt.Errorf("protect failed for fd %d", fd)
+	if tunFd > 0 {
+		key := &engine.Key{
+			Device: fmt.Sprintf("fd://%d", tunFd),
+			Proxy:  "socks5://127.0.0.1:2080",
+			MTU:    1500,
 		}
+		engine.Start(key)
+		tunKey = key
 	}
+
 	return nil
 }
 
-func (e *EngineWrapper) OpenTun(options libbox.TunOptions) (int32, error) {
-	if e.bridge != nil {
-		return e.bridge.OpenTun()
+// StopProxy cleanly stops tun2socks and Sing-Box core
+func StopProxy() error {
+	mu.Lock()
+	defer mu.Unlock()
+	return stopInternal()
+}
+
+func stopInternal() error {
+	if tunKey != nil {
+		engine.Stop()
+		tunKey = nil
 	}
-	return 0, fmt.Errorf("no platform bridge")
-}
-
-func (e *EngineWrapper) UseProcFS() bool {
-	return false
-}
-
-func (e *EngineWrapper) FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (*libbox.ConnectionOwner, error) {
-	return nil, nil
-}
-
-func (e *EngineWrapper) StartDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
-	return nil
-}
-
-func (e *EngineWrapper) CloseDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
-	return nil
-}
-
-func (e *EngineWrapper) GetInterfaces() (libbox.NetworkInterfaceIterator, error) {
-	return nil, nil
-}
-
-func (e *EngineWrapper) UnderNetworkExtension() bool {
-	return false
-}
-
-func (e *EngineWrapper) IncludeAllNetworks() bool {
-	return false
-}
-
-func (e *EngineWrapper) ReadWIFIState() *libbox.WIFIState {
-	return nil
-}
-
-func (e *EngineWrapper) SystemCertificates() libbox.StringIterator {
-	return nil
-}
-
-func (e *EngineWrapper) ClearDNSCache() {
-}
-
-func (e *EngineWrapper) SendNotification(notification *libbox.Notification) error {
-	return nil
-}
-
-func (e *EngineWrapper) Start(configJSON string) error {
-	if e.server == nil {
-		return fmt.Errorf("command server is nil")
-	}
-	return e.server.StartOrReloadService(configJSON, nil)
-}
-
-func (e *EngineWrapper) Stop() error {
-	if e.server != nil {
-		return e.server.CloseService()
+	if instance != nil {
+		err := instance.Close()
+		instance = nil
+		return err
 	}
 	return nil
 }

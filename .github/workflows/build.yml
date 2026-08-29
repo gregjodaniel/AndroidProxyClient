@@ -60,35 +60,35 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.0.6.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.0.7.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.0.6
-          path: release_output/AndroidProxyClient-v1.0.6.apk
+          name: AndroidProxyClient-v1.0.7
+          path: release_output/AndroidProxyClient-v1.0.7.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.0.6
-          name: "Android Proxy Client v1.0.6 (Release - Robust Gomobile Reflection & Diagnostic)"
+          tag_name: v1.0.7
+          name: "Android Proxy Client v1.0.7 (Release - Stable gVisor Tun2Socks Engine)"
           body: |
-            ## Android Proxy Client v1.0.6
+            ## Android Proxy Client v1.0.7
 
-            基于 **官方 SingBox v1.13.20 SFA (SingBox For Android) 平台架构** 的开源高性能 Android 代理客户端。
+            基于 **SingBox v1.13.20 + gVisor Tun2Socks** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 关键修复 (v1.0.6)
-            - 🌟 **修复 Gomobile 反射方法签名匹配**：解决大小写敏感（`newEngine` vs `NewEngine`）导致的原生内核反射调用静默失败。
-            - 🌟 **增加前台实时错误诊断弹窗**：启动遇到任何异常均会实时弹窗展示具体错误。
-            - 🌟 **SingBox v1.13.20 最新生产内核**。
+            ### 🚀 架构革新（彻底解决 Android 11/12/13/14 兼容性与闪退问题）
+            - 🌟 **采用经典稳定 gVisor Tun2Socks 架构（同 v2rayNG / Shadowsocks-Android）**：移除导致 Android 11 闪退的 desktop IPC 套接字依赖，由 Go gVisor 原生接管 TUN `fd`。
+            - 🌟 **SingBox v1.13.20 最新生产内核驱动**：处理所有 VLESS / VMess / Shadowsocks / Hysteria2 / Cloudflare CDN 优选节点握手与远程 DNS 分流。
+            - 🌟 **全兼容 Android 11+ 前台服务规范**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.6.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.7.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.0.6.apk
+          files: release_output/AndroidProxyClient-v1.0.7.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

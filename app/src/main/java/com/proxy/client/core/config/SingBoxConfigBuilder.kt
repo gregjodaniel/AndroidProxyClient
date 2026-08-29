@@ -7,13 +7,11 @@ import org.json.JSONObject
 class SingBoxConfigBuilder {
 
     private var localSocksPort: Int = 2080
-    private var localHttpPort: Int = 2081
     private val outbounds = mutableListOf<JSONObject>()
     private var routeMode: RouteMode = RouteMode.RULE
 
-    fun setLocalInbound(socksPort: Int, httpPort: Int) = apply {
+    fun setLocalInbound(socksPort: Int) = apply {
         this.localSocksPort = socksPort
-        this.localHttpPort = httpPort
     }
 
     fun setRouteMode(mode: RouteMode) = apply {
@@ -58,15 +56,6 @@ class SingBoxConfigBuilder {
         })
 
         val inbounds = JSONArray().apply {
-            put(JSONObject().apply {
-                put("type", "tun")
-                put("tag", "tun-in")
-                put("inet4_address", "172.19.0.1/30")
-                put("auto_route", true)
-                put("strict_route", true)
-                put("stack", "gvisor")
-                put("sniff", true)
-            })
             put(JSONObject().apply {
                 put("type", "mixed")
                 put("tag", "mixed-in")

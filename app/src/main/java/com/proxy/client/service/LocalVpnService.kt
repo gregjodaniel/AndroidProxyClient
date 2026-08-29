@@ -32,9 +32,8 @@ class LocalVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         proxyEngine = SingBoxEngine(
-            protector = { fd -> this.protect(fd) },
-            openTunProvider = {
-                val fd = setupVpnInterface() ?: throw RuntimeException("建立TUN接口失败: VpnService.Builder().establish() 返回了null，请检查系统VPN权限")
+            tunFdProvider = {
+                val fd = setupVpnInterface() ?: throw RuntimeException("建立TUN接口失败，请检查系统VPN权限")
                 fd
             }
         )
@@ -67,7 +66,7 @@ class LocalVpnService : VpnService() {
             ACTION_START -> {
                 val node = pendingNode
                 if (node == null) {
-                    val err = "没有选中的节点(pendingNode为空),无法启动VPN"
+                    val err = "没有选中的节点，无法启动VPN"
                     Log.e(TAG, err)
                     _lastError.value = err
                     stopSelf()
@@ -84,7 +83,7 @@ class LocalVpnService : VpnService() {
                             .addProxyNode(node)
                             .build(node.tag)
 
-                        Log.d(TAG, "生成的 SingBox 配置 JSON:\n$configJson")
+                        Log.d(TAG, "生成的配置 JSON:\n$configJson")
                         proxyEngine.start(configJson)
                     } catch (e: Exception) {
                         val errMsg = e.message ?: e.toString()
@@ -112,7 +111,7 @@ class LocalVpnService : VpnService() {
             try {
                 addDisallowedApplication(packageName)
             } catch (e: Exception) {
-                Log.w(TAG, "addDisallowedApplication失败,继续尝试建立VPN", e)
+                Log.w(TAG, "addDisallowedApplication失败", e)
             }
         }
         vpnInterface = builder.establish()
