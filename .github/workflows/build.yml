@@ -48,8 +48,10 @@ jobs:
         run: |
           mkdir -p app/libs
           cd core
-          go install golang.org/x/mobile/cmd/gobind@v0.0.0-20240404192539-74d15d658dd2
-          go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240404192539-74d15d658dd2
+          go install golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go get golang.org/x/mobile/bind@latest
+          go mod tidy
           gomobile init
           gomobile bind -target=android -androidapi 21 -ldflags="-s -w" -o ../app/libs/libcore.aar .
           ls -lh ../app/libs/
