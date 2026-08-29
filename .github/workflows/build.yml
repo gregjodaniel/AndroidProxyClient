@@ -59,36 +59,37 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.0.3.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.0.4.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.0.3
-          path: release_output/AndroidProxyClient-v1.0.3.apk
+          name: AndroidProxyClient-v1.0.4
+          path: release_output/AndroidProxyClient-v1.0.4.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.0.3
-          name: "Android Proxy Client v1.0.3 (Release)"
+          tag_name: v1.0.4
+          name: "Android Proxy Client v1.0.4 (Release - SingBox v1.13.20 最新内核)"
           body: |
-            ## Android Proxy Client v1.0.3
+            ## Android Proxy Client v1.0.4
 
-            基于 **SingBox / Android VpnService** 的开源高性能 Android 代理客户端。
+            基于 **最新 SingBox v1.13.20 / Android VpnService** 的开源高性能 Android 代理客户端。
 
-            ### 🚀 全面对齐成熟客户端体系（SFA / v2rayNG 标准）：
+            ### 🚀 升级与关键修复 (v1.0.4)
+            - 🌟 **全面升级至 SingBox v1.13.20 最新内核**：采用目前官方最新的生产稳定内核。
             - 🌟 **精准 DNS 劫持与分流**：添加 UDP 53 端口全局劫持规则，彻底解决 Android 应用 DNS 解析无响应问题。
             - 🌟 **TLS 协议扩展修复**：修复 ALPN 空数组传输导致 Cloudflare CDN 握手失败的问题。
             - 🌟 **gVisor 用户态网络栈**：TUN Inbound 指定 `"stack": "gvisor"`，完成原始 IP 报文与代理数据流无损互转。
             - 🌟 **Cloudflare CDN 优选节点专属适配**：WebSocket `Host` 握手头与路径解码注入。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.3.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.4.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.0.3.apk
+          files: release_output/AndroidProxyClient-v1.0.4.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
