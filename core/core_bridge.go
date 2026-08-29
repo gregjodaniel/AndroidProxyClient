@@ -41,11 +41,29 @@ func (e *EngineWrapper) UsePlatformAutoDetectInterfaceControl() bool {
 }
 
 func (e *EngineWrapper) UsePlatformDefaultInterfaceMonitor() bool {
-	return true
+	return false
 }
 
 func (e *EngineWrapper) UsePlatformInterfaceControl() bool {
-	return true
+	return false
+}
+
+func (e *EngineWrapper) ClearDNSCache() {
+}
+
+func (e *EngineWrapper) FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (int32, error) {
+	return 0, nil
+}
+
+func (e *EngineWrapper) PackageNameByUid(uid int32) (string, error) {
+	return "", nil
+}
+
+func (e *EngineWrapper) UidByPackageName(packageName string) (int32, error) {
+	return 0, nil
+}
+
+func (e *EngineWrapper) WriteLog(message string) {
 }
 
 func (e *EngineWrapper) Start(configJSON string) error {
