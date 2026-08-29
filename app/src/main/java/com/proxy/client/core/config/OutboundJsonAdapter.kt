@@ -17,7 +17,7 @@ object OutboundJsonAdapter {
                 json.put("type", "vless")
                 json.put("uuid", node.uuid)
                 node.flow?.let { if (it.isNotBlank()) json.put("flow", it) }
-                applySecurity(json, node.security)
+                applySecurity(json, node.security, node.server)
                 applyTransport(json, node.transport)
             }
             is ProxyNodeConfig.Vmess -> {
@@ -25,13 +25,13 @@ object OutboundJsonAdapter {
                 json.put("uuid", node.uuid)
                 json.put("alter_id", node.alterId)
                 json.put("security", node.security)
-                applySecurity(json, node.tlsConfig)
+                applySecurity(json, node.tlsConfig, node.server)
                 applyTransport(json, node.transport)
             }
             is ProxyNodeConfig.Trojan -> {
                 json.put("type", "trojan")
                 json.put("password", node.password)
-                applySecurity(json, node.security)
+                applySecurity(json, node.security, node.server)
                 applyTransport(json, node.transport)
             }
             is ProxyNodeConfig.Hysteria2 -> {
@@ -45,7 +45,7 @@ object OutboundJsonAdapter {
                         put("password", node.obfsPassword)
                     })
                 }
-                applySecurity(json, node.security)
+                applySecurity(json, node.security, node.server)
             }
             is ProxyNodeConfig.Tuic -> {
                 json.put("type", "tuic")
@@ -53,7 +53,7 @@ object OutboundJsonAdapter {
                 json.put("password", node.password)
                 json.put("congestion_control", node.congestionControl)
                 json.put("udp_relay_mode", node.udpRelayMode)
-                applySecurity(json, node.security)
+                applySecurity(json, node.security, node.server)
             }
             is ProxyNodeConfig.Shadowsocks -> {
                 json.put("type", "shadowsocks")
@@ -64,12 +64,13 @@ object OutboundJsonAdapter {
         return json
     }
 
-    private fun applySecurity(json: JSONObject, security: SecurityConfig) {
+    private fun applySecurity(json: JSONObject, security: SecurityConfig, defaultServer: String) {
         when (security) {
             is SecurityConfig.Tls -> {
                 json.put("tls", JSONObject().apply {
                     put("enabled", true)
-                    security.serverName?.let { if (it.isNotBlank()) put("server_name", it) }
+                    val sni = if (!security.serverName.isNullOrBlank()) security.serverName else defaultServer
+                    put("server_name", sni)
                     if (security.alpn.isNotEmpty()) {
                         put("alpn", JSONArray(security.alpn))
                     }
@@ -81,7 +82,8 @@ object OutboundJsonAdapter {
             is SecurityConfig.Reality -> {
                 json.put("tls", JSONObject().apply {
                     put("enabled", true)
-                    put("server_name", security.serverName)
+                    val sni = if (!security.serverName.isNullOrBlank()) security.serverName else defaultServer
+                    put("server_name", sni)
                     put("reality", JSONObject().apply {
                         put("enabled", true)
                         put("public_key", security.publicKey)

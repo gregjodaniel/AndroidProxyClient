@@ -30,14 +30,14 @@ class SingBoxConfigBuilder {
             put("timestamp", true)
         })
 
-        // sing-box 1.12+ / 1.13+ 官方全新 DNS 服务器格式 (移除了已废弃的 address 字段)
+        // 标准高性能 1.13.x DNS 配置
+        // 远程 DNS 走代理节点隧道直连 8.8.8.8:53，无需额外 TLS 握手且天然被代理隧道加密保护
         root.put("dns", JSONObject().apply {
             val servers = JSONArray().apply {
                 put(JSONObject().apply {
                     put("tag", "remote-dns")
-                    put("type", "https")
-                    put("server", "1.1.1.1")
-                    put("path", "/dns-query")
+                    put("type", "udp")
+                    put("server", "8.8.8.8")
                     put("detour", activeOutboundTag)
                 })
                 put(JSONObject().apply {
