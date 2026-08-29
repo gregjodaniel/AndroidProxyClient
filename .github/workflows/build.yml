@@ -75,16 +75,16 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           tag_name: v1.0.9
-          name: "Android Proxy Client v1.0.9 (Release - Fixed Context Registries & Full Startup)"
+          name: "Android Proxy Client v1.0.9 (Release - Official libbox.NewService Integration)"
           body: |
             ## Android Proxy Client v1.0.9
 
-            基于 **SingBox v1.13.20 + gVisor Tun2Socks** 纯用户态架构的开源高性能 Android 代理客户端。
+            基于 **官方 libbox.NewService (SingBox v1.13.20) + gVisor Tun2Socks** 纯用户态架构的开源高性能 Android 代理客户端。
 
             ### 🚀 关键修复 (v1.0.9)
-            - 🌟 **注入 SingBox 完整协议注册表 (include registries into box.Context)**：解决 `missing endpoint registry in context` 导致内核无法实例化的底层问题。
-            - 🌟 **完整支持所有 VLESS / VMess / Shadowsocks / Hysteria2 节点与 Cloudflare CDN 优选**。
-            - 🌟 **纯用户态 gVisor TUN 拦截驱动，零崩溃**。
+            - 🌟 **采用官方 libbox.NewService 容器**：自动托管完整的内嵌协议注册表和上下文生命周期，彻底解决 `missing endpoint registry in context`。
+            - 🌟 **完美融合 gVisor Tun2Socks 虚拟网卡通道**：提供零崩溃、全兼容 Android 11+ 的 VPN 代理通道。
+            - 🌟 **完整支持 VLESS / VMess / Shadowsocks / Hysteria2 及 Cloudflare CDN 优选节点**。
 
             ### 📥 下载安装
             直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.9.apk` 覆盖安装即可。

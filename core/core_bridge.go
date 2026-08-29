@@ -1,24 +1,82 @@
 package corebridge
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 
-	box "github.com/sagernet/sing-box"
-	"github.com/sagernet/sing-box/include"
-	"github.com/sagernet/sing-box/option"
 	_ "golang.org/x/mobile/bind"
+	"github.com/sagernet/sing-box/experimental/libbox"
+	_ "github.com/sagernet/sing-box/include"
 	"github.com/xjasonlyu/tun2socks/v2/engine"
 )
 
 var (
-	mu       sync.Mutex
-	instance *box.Box
-	cancel   context.CancelFunc
-	started  bool
+	mu      sync.Mutex
+	service *libbox.BoxService
+	started bool
 )
+
+type PlatformBridge struct{}
+
+func (b *PlatformBridge) LocalDNSTransport() libbox.LocalDNSTransport {
+	return nil
+}
+
+func (b *PlatformBridge) UsePlatformAutoDetectInterfaceControl() bool {
+	return false
+}
+
+func (b *PlatformBridge) AutoDetectInterfaceControl(fd int32) error {
+	return nil
+}
+
+func (b *PlatformBridge) OpenTun(options libbox.TunOptions) (int32, error) {
+	return 0, nil
+}
+
+func (b *PlatformBridge) WriteLog(message string) {}
+
+func (b *PlatformBridge) UseProcFS() bool {
+	return false
+}
+
+func (b *PlatformBridge) FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (int32, error) {
+	return 0, nil
+}
+
+func (b *PlatformBridge) PackageNameByUid(uid int32) (string, error) {
+	return "", nil
+}
+
+func (b *PlatformBridge) UIDByPackageName(packageName string) (int32, error) {
+	return 0, nil
+}
+
+func (b *PlatformBridge) StartDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
+	return nil
+}
+
+func (b *PlatformBridge) CloseDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
+	return nil
+}
+
+func (b *PlatformBridge) GetInterfaces() (libbox.NetworkInterfaceIterator, error) {
+	return nil, nil
+}
+
+func (b *PlatformBridge) UnderNetworkExtension() bool {
+	return false
+}
+
+func (b *PlatformBridge) IncludeAllNetworks() bool {
+	return false
+}
+
+func (b *PlatformBridge) ClearDNSCache() {}
+
+func (b *PlatformBridge) ReadSystemDNSServers() string {
+	return ""
+}
 
 // StartProxy starts the Sing-Box core and attaches tun2socks to the Android VPN fd
 func StartProxy(configJSON string, tunFd int) error {
@@ -27,36 +85,18 @@ func StartProxy(configJSON string, tunFd int) error {
 
 	stopInternal()
 
-	var opts option.Options
-	err := json.Unmarshal([]byte(configJSON), &opts)
+	bridge := &PlatformBridge{}
+	boxService, err := libbox.NewService(configJSON, bridge)
 	if err != nil {
-		return fmt.Errorf("配置JSON解析失败: %w", err)
-	}
-
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	ctx = box.Context(
-		ctx,
-		include.InboundRegistry(),
-		include.OutboundRegistry(),
-		include.EndpointRegistry(),
-	)
-
-	boxInst, err := box.New(box.Options{
-		Context: ctx,
-		Options: opts,
-	})
-	if err != nil {
-		cancelFunc()
 		return fmt.Errorf("SingBox配置初始化失败: %w", err)
 	}
 
-	err = boxInst.Start()
+	err = boxService.Start()
 	if err != nil {
-		cancelFunc()
+		boxService.Close()
 		return fmt.Errorf("SingBox启动失败: %w", err)
 	}
-	instance = boxInst
-	cancel = cancelFunc
+	service = boxService
 
 	if tunFd > 0 {
 		key := &engine.Key{
@@ -65,11 +105,7 @@ func StartProxy(configJSON string, tunFd int) error {
 			MTU:    1500,
 		}
 		engine.Insert(key)
-		err = engine.Start()
-		if err != nil {
-			stopInternal()
-			return fmt.Errorf("tun2socks启动失败: %w", err)
-		}
+		engine.Start()
 		started = true
 	}
 
@@ -88,18 +124,10 @@ func stopInternal() error {
 		engine.Stop()
 		started = false
 	}
-	if instance != nil {
-		err := instance.Close()
-		instance = nil
-		if cancel != nil {
-			cancel()
-			cancel = nil
-		}
+	if service != nil {
+		err := service.Close()
+		service = nil
 		return err
-	}
-	if cancel != nil {
-		cancel()
-		cancel = nil
 	}
 	return nil
 }
