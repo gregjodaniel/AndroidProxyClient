@@ -24,17 +24,6 @@ class SingBoxConfigBuilder {
         outbounds.add(OutboundJsonAdapter.toJson(node))
     }
 
-    /**
-     * @param activeOutboundTag 当前选中节点的outbound tag
-     * @param tunFd 已经由 VpnService.Builder().establish() 建立好的TUN文件描述符。
-     *              之前的版本没有这个参数,inbound里也没写fd字段,
-     *              配合 auto_route=true 会导致sing-box尝试自己创建TUN设备——
-     *              这在没有root权限的普通App里是做不到的,是TUN转发链路
-     *              完全不通的根本原因。现在改成直接复用已经建立好的fd,
-     *              并把 auto_route/strict_route 都关掉,因为地址、路由、DNS
-     *              这些已经在 LocalVpnService 的 Builder 里配置过一次了,
-     *              不需要sing-box自己再配置一遍(两边都配反而容易冲突)。
-     */
     fun build(activeOutboundTag: String, tunFd: Int): String {
         val root = JSONObject()
 
@@ -47,7 +36,8 @@ class SingBoxConfigBuilder {
             val servers = JSONArray().apply {
                 put(JSONObject().apply {
                     put("tag", "remote-dns")
-                    put("address", "https://1.1.1.1/dns-query")
+                    put("address", "tls://8.8.8.8")
+                    put("address_resolver", "local-dns")
                     put("detour", activeOutboundTag)
                 })
                 put(JSONObject().apply {
@@ -57,22 +47,17 @@ class SingBoxConfigBuilder {
                 })
             }
             put("servers", servers)
-            val dnsRules = JSONArray().apply {
-                put(JSONObject().apply {
-                    put("geosite", JSONArray().put("cn"))
-                    put("server", "local-dns")
-                })
-            }
-            put("rules", dnsRules)
+            put("strategy", "prefer_ipv4")
         })
 
         val inbounds = JSONArray().apply {
             put(JSONObject().apply {
                 put("type", "tun")
                 put("tag", "tun-in")
-                put("fd", tunFd)          // 关键修复:复用已建立的fd,而不是让sing-box自己创建TUN设备
+                put("fd", tunFd)
                 put("inet4_address", "172.19.0.1/30")
-                put("auto_route", false)  // 路由已经由LocalVpnService的Builder配置过了
+                put("stack", "gvisor")
+                put("auto_route", false)
                 put("strict_route", false)
                 put("sniff", true)
             })
@@ -110,25 +95,17 @@ class SingBoxConfigBuilder {
                     put("outbound", "dns-out")
                 })
                 put(JSONObject().apply {
-                    put("geoip", JSONArray().put("private"))
+                    put("ip_cidr", JSONArray().apply {
+                        put("10.0.0.0/8")
+                        put("172.16.0.0/12")
+                        put("192.168.0.0/16")
+                        put("127.0.0.0/8")
+                    })
                     put("outbound", "direct-out")
                 })
 
                 when (routeMode) {
-                    RouteMode.RULE -> {
-                        put(JSONObject().apply {
-                            put("geosite", JSONArray().put("cn"))
-                            put("outbound", "direct-out")
-                        })
-                        put(JSONObject().apply {
-                            put("geoip", JSONArray().put("cn"))
-                            put("outbound", "direct-out")
-                        })
-                        put(JSONObject().apply {
-                            put("outbound", activeOutboundTag)
-                        })
-                    }
-                    RouteMode.GLOBAL -> {
+                    RouteMode.RULE, RouteMode.GLOBAL -> {
                         put(JSONObject().apply {
                             put("outbound", activeOutboundTag)
                         })

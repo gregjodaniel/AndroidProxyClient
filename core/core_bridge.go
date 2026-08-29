@@ -1,23 +1,19 @@
 package corebridge
 
 import (
-	"context"
-	"encoding/json"
-	"syscall"
+	"fmt"
 
-	box "github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box/experimental/libbox"
 	_ "github.com/sagernet/sing-box/include"
-	"github.com/sagernet/sing-box/option"
 	_ "golang.org/x/mobile/bind"
 )
 
-// SocketProtector 对应 Java 层的回调接口 (gomobile 生成)
 type SocketProtector interface {
 	Protect(fd int32) bool
 }
 
 type EngineWrapper struct {
-	instance  *box.Box
+	service   *libbox.BoxService
 	protector SocketProtector
 }
 
@@ -27,48 +23,48 @@ func NewEngine(protector SocketProtector) *EngineWrapper {
 	}
 }
 
-// DialControl 实现底层 Socket 劫持与 Protect
-func (e *EngineWrapper) DialControl(network, address string, c syscall.RawConn) error {
-	if e.protector == nil {
-		return nil
-	}
-	var protectErr error
-	err := c.Control(func(fd uintptr) {
-		if !e.protector.Protect(int32(fd)) {
-			protectErr = syscall.EACCES
+func (e *EngineWrapper) AutoDetectInterfaceControl(fd int32) error {
+	if e.protector != nil {
+		if !e.protector.Protect(fd) {
+			return fmt.Errorf("protect failed for fd %d", fd)
 		}
-	})
-	if err != nil {
-		return err
 	}
-	return protectErr
+	return nil
 }
 
-// Start 启动 sing-box 实例
+func (e *EngineWrapper) OpenTun(options libbox.TunOptions) (int32, error) {
+	return 0, nil
+}
+
+func (e *EngineWrapper) UsePlatformAutoDetectInterfaceControl() bool {
+	return true
+}
+
+func (e *EngineWrapper) UsePlatformDefaultInterfaceMonitor() bool {
+	return true
+}
+
+func (e *EngineWrapper) UsePlatformInterfaceControl() bool {
+	return true
+}
+
 func (e *EngineWrapper) Start(configJSON string) error {
-	var opts option.Options
-	err := json.Unmarshal([]byte(configJSON), &opts)
+	service, err := libbox.NewService(configJSON, e)
 	if err != nil {
 		return err
 	}
-
-	ctx := context.Background()
-	instance, err := box.New(box.Options{
-		Context: ctx,
-		Options: opts,
-	})
+	err = service.Start()
 	if err != nil {
 		return err
 	}
-
-	e.instance = instance
-	return e.instance.Start()
+	e.service = service
+	return nil
 }
 
 func (e *EngineWrapper) Stop() error {
-	if e.instance != nil {
-		err := e.instance.Close()
-		e.instance = nil
+	if e.service != nil {
+		err := e.service.Close()
+		e.service = nil
 		return err
 	}
 	return nil
