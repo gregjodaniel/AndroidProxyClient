@@ -70,8 +70,12 @@ object OutboundJsonAdapter {
                 json.put("tls", JSONObject().apply {
                     put("enabled", true)
                     security.serverName?.let { if (it.isNotBlank()) put("server_name", it) }
-                    put("alpn", JSONArray(security.alpn))
-                    put("insecure", security.allowInsecure)
+                    if (security.alpn.isNotEmpty()) {
+                        put("alpn", JSONArray(security.alpn))
+                    }
+                    if (security.allowInsecure) {
+                        put("insecure", true)
+                    }
                 })
             }
             is SecurityConfig.Reality -> {

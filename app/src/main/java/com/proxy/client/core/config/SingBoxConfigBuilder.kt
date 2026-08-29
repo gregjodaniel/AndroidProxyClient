@@ -28,7 +28,7 @@ class SingBoxConfigBuilder {
         val root = JSONObject()
 
         root.put("log", JSONObject().apply {
-            put("level", "warn")
+            put("level", "info")
             put("timestamp", true)
         })
 
@@ -36,17 +36,24 @@ class SingBoxConfigBuilder {
             val servers = JSONArray().apply {
                 put(JSONObject().apply {
                     put("tag", "remote-dns")
-                    put("address", "tls://8.8.8.8")
-                    put("address_resolver", "local-dns")
+                    put("address", "https://1.1.1.1/dns-query")
                     put("detour", activeOutboundTag)
                 })
                 put(JSONObject().apply {
-                    put("tag", "local-dns")
+                    put("tag", "direct-dns")
                     put("address", "223.5.5.5")
                     put("detour", "direct-out")
                 })
             }
             put("servers", servers)
+            val rules = JSONArray().apply {
+                put(JSONObject().apply {
+                    put("outbound", JSONArray().put("direct-out"))
+                    put("server", "direct-dns")
+                })
+            }
+            put("rules", rules)
+            put("final", "remote-dns")
             put("strategy", "prefer_ipv4")
         })
 
@@ -55,7 +62,7 @@ class SingBoxConfigBuilder {
                 put("type", "tun")
                 put("tag", "tun-in")
                 put("fd", tunFd)
-                put("inet4_address", "172.19.0.1/30")
+                put("address", JSONArray().put("172.19.0.1/30"))
                 put("stack", "gvisor")
                 put("auto_route", false)
                 put("strict_route", false)
@@ -90,6 +97,10 @@ class SingBoxConfigBuilder {
         root.put("route", JSONObject().apply {
             put("auto_detect_interface", true)
             val rules = JSONArray().apply {
+                put(JSONObject().apply {
+                    put("port", JSONArray().put(53))
+                    put("outbound", "dns-out")
+                })
                 put(JSONObject().apply {
                     put("protocol", "dns")
                     put("outbound", "dns-out")
