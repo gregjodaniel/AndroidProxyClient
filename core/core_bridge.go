@@ -3,11 +3,13 @@ package corebridge
 import (
 	"context"
 	"syscall"
+
 	box "github.com/sagernet/sing-box"
+	_ "github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
 )
 
-// SocketProtector 对应 Java 层的回调接口 (gomobile 生成或 JNI 传递)
+// SocketProtector 对应 Java 层的回调接口 (gomobile 生成)
 type SocketProtector interface {
 	Protect(fd int32) bool
 }
@@ -30,7 +32,6 @@ func (e *EngineWrapper) DialControl(network, address string, c syscall.RawConn) 
 	}
 	var protectErr error
 	err := c.Control(func(fd uintptr) {
-		// 调用 Java 层的 protect(fd)
 		if !e.protector.Protect(int32(fd)) {
 			protectErr = syscall.EACCES
 		}
