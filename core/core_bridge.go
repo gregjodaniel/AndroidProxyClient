@@ -1,10 +1,12 @@
 package corebridge
 
 import (
-	"fmt"
+	"context"
+	"encoding/json"
 
-	"github.com/sagernet/sing-box/experimental/libbox"
+	box "github.com/sagernet/sing-box"
 	_ "github.com/sagernet/sing-box/include"
+	"github.com/sagernet/sing-box/option"
 	_ "golang.org/x/mobile/bind"
 )
 
@@ -13,7 +15,7 @@ type SocketProtector interface {
 }
 
 type EngineWrapper struct {
-	service   *libbox.BoxService
+	instance  *box.Box
 	protector SocketProtector
 }
 
@@ -23,66 +25,30 @@ func NewEngine(protector SocketProtector) *EngineWrapper {
 	}
 }
 
-func (e *EngineWrapper) AutoDetectInterfaceControl(fd int32) error {
-	if e.protector != nil {
-		if !e.protector.Protect(fd) {
-			return fmt.Errorf("protect failed for fd %d", fd)
-		}
-	}
-	return nil
-}
-
-func (e *EngineWrapper) OpenTun(options libbox.TunOptions) (int32, error) {
-	return 0, nil
-}
-
-func (e *EngineWrapper) UsePlatformAutoDetectInterfaceControl() bool {
-	return true
-}
-
-func (e *EngineWrapper) UsePlatformDefaultInterfaceMonitor() bool {
-	return false
-}
-
-func (e *EngineWrapper) UsePlatformInterfaceControl() bool {
-	return false
-}
-
-func (e *EngineWrapper) ClearDNSCache() {
-}
-
-func (e *EngineWrapper) FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (int32, error) {
-	return 0, nil
-}
-
-func (e *EngineWrapper) PackageNameByUid(uid int32) (string, error) {
-	return "", nil
-}
-
-func (e *EngineWrapper) UidByPackageName(packageName string) (int32, error) {
-	return 0, nil
-}
-
-func (e *EngineWrapper) WriteLog(message string) {
-}
-
 func (e *EngineWrapper) Start(configJSON string) error {
-	service, err := libbox.NewService(configJSON, e)
+	var opts option.Options
+	err := json.Unmarshal([]byte(configJSON), &opts)
 	if err != nil {
 		return err
 	}
-	err = service.Start()
+
+	ctx := context.Background()
+	instance, err := box.New(box.Options{
+		Context: ctx,
+		Options: opts,
+	})
 	if err != nil {
 		return err
 	}
-	e.service = service
-	return nil
+
+	e.instance = instance
+	return e.instance.Start()
 }
 
 func (e *EngineWrapper) Stop() error {
-	if e.service != nil {
-		err := e.service.Close()
-		e.service = nil
+	if e.instance != nil {
+		err := e.instance.Close()
+		e.instance = nil
 		return err
 	}
 	return nil
