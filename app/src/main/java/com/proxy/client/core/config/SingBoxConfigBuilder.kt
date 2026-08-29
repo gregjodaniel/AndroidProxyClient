@@ -88,7 +88,22 @@ class SingBoxConfigBuilder {
         }
 
         root.put("route", JSONObject().apply {
-            put("auto_detect_interface", true)
+            // 注意:这里故意不设置 auto_detect_interface。
+            // 这个选项会让sing-box在初始化时立刻创建一个基于netlink的
+            // 网络接口监控器,用来实时感知"当前默认网络是WiFi还是移动数据"。
+            // 但netlink socket在Android上普通App(非root/非系统应用)
+            // 是被禁止直接创建的——这正是报错
+            // "netlink socket in Android is banned by Google" 的来源,
+            // 这句话是sing-tun库里硬编码的原文,不是我们代码的问题。
+            //
+            // 官方sing-box-for-android能用这个功能,是因为它实现了完整的
+            // PlatformInterface,让网络接口监控改走Android自己的
+            // ConnectivityManager API,而不是走Linux的netlink。
+            // 我们现在的架构(sing-box只跑本地mixed/socks,TUN由
+            // tun2socks单独接管,见core_bridge.go)本身就不需要
+            // sing-box自己感知网络接口变化——出站连接走系统默认路由
+            // 就够了,所以直接不启用这个选项,而不是去实现一整套
+            // PlatformInterface(那是官方GUI客户端级别的工作量)。
             put("final", finalOutbound)
             val rules = JSONArray().apply {
                 put(JSONObject().apply {
