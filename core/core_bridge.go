@@ -2,132 +2,130 @@ package corebridge
 
 import (
 	"fmt"
-	"sync"
 
-	_ "golang.org/x/mobile/bind"
 	"github.com/sagernet/sing-box/experimental/libbox"
 	_ "github.com/sagernet/sing-box/include"
-	"github.com/xjasonlyu/tun2socks/v2/engine"
+	_ "golang.org/x/mobile/bind"
 )
 
-var (
-	mu      sync.Mutex
-	service *libbox.BoxService
-	started bool
-)
+type PlatformBridge interface {
+	OpenTun() (int32, error)
+	Protect(fd int32) bool
+}
 
-type PlatformBridge struct{}
+type EngineWrapper struct {
+	server *libbox.CommandServer
+	bridge PlatformBridge
+}
 
-func (b *PlatformBridge) LocalDNSTransport() libbox.LocalDNSTransport {
+func NewEngine(bridge PlatformBridge) (*EngineWrapper, error) {
+	e := &EngineWrapper{
+		bridge: bridge,
+	}
+	server, err := libbox.NewCommandServer(e, e)
+	if err != nil {
+		return nil, err
+	}
+	e.server = server
+	return e, nil
+}
+
+// CommandServerHandler
+func (e *EngineWrapper) ServiceStop() error {
 	return nil
 }
 
-func (b *PlatformBridge) UsePlatformAutoDetectInterfaceControl() bool {
-	return false
-}
-
-func (b *PlatformBridge) AutoDetectInterfaceControl(fd int32) error {
+func (e *EngineWrapper) ServiceReload() error {
 	return nil
 }
 
-func (b *PlatformBridge) OpenTun(options libbox.TunOptions) (int32, error) {
-	return 0, nil
-}
-
-func (b *PlatformBridge) WriteLog(message string) {}
-
-func (b *PlatformBridge) UseProcFS() bool {
-	return false
-}
-
-func (b *PlatformBridge) FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (int32, error) {
-	return 0, nil
-}
-
-func (b *PlatformBridge) PackageNameByUid(uid int32) (string, error) {
-	return "", nil
-}
-
-func (b *PlatformBridge) UIDByPackageName(packageName string) (int32, error) {
-	return 0, nil
-}
-
-func (b *PlatformBridge) StartDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
-	return nil
-}
-
-func (b *PlatformBridge) CloseDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
-	return nil
-}
-
-func (b *PlatformBridge) GetInterfaces() (libbox.NetworkInterfaceIterator, error) {
+func (e *EngineWrapper) GetSystemProxyStatus() (*libbox.SystemProxyStatus, error) {
 	return nil, nil
 }
 
-func (b *PlatformBridge) UnderNetworkExtension() bool {
-	return false
-}
-
-func (b *PlatformBridge) IncludeAllNetworks() bool {
-	return false
-}
-
-func (b *PlatformBridge) ClearDNSCache() {}
-
-func (b *PlatformBridge) ReadSystemDNSServers() string {
-	return ""
-}
-
-// StartProxy starts the Sing-Box core and attaches tun2socks to the Android VPN fd
-func StartProxy(configJSON string, tunFd int) error {
-	mu.Lock()
-	defer mu.Unlock()
-
-	stopInternal()
-
-	bridge := &PlatformBridge{}
-	boxService, err := libbox.NewService(configJSON, bridge)
-	if err != nil {
-		return fmt.Errorf("SingBox配置初始化失败: %w", err)
-	}
-
-	err = boxService.Start()
-	if err != nil {
-		boxService.Close()
-		return fmt.Errorf("SingBox启动失败: %w", err)
-	}
-	service = boxService
-
-	if tunFd > 0 {
-		key := &engine.Key{
-			Device: fmt.Sprintf("fd://%d", tunFd),
-			Proxy:  "socks5://127.0.0.1:2080",
-			MTU:    1500,
-		}
-		engine.Insert(key)
-		engine.Start()
-		started = true
-	}
-
+func (e *EngineWrapper) SetSystemProxyEnabled(enabled bool) error {
 	return nil
 }
 
-// StopProxy cleanly stops tun2socks and Sing-Box core
-func StopProxy() error {
-	mu.Lock()
-	defer mu.Unlock()
-	return stopInternal()
+func (e *EngineWrapper) WriteDebugMessage(message string) {}
+
+// PlatformInterface
+func (e *EngineWrapper) LocalDNSTransport() libbox.LocalDNSTransport {
+	return nil
 }
 
-func stopInternal() error {
-	if started {
-		engine.Stop()
-		started = false
+func (e *EngineWrapper) UsePlatformAutoDetectInterfaceControl() bool {
+	return true
+}
+
+func (e *EngineWrapper) AutoDetectInterfaceControl(fd int32) error {
+	if e.bridge != nil {
+		if !e.bridge.Protect(fd) {
+			return fmt.Errorf("protect failed for fd %d", fd)
+		}
 	}
-	if service != nil {
-		err := service.Close()
-		service = nil
-		return err
+	return nil
+}
+
+func (e *EngineWrapper) OpenTun(options libbox.TunOptions) (int32, error) {
+	if e.bridge != nil {
+		return e.bridge.OpenTun()
+	}
+	return 0, fmt.Errorf("no platform bridge")
+}
+
+func (e *EngineWrapper) UseProcFS() bool {
+	return false
+}
+
+func (e *EngineWrapper) FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (*libbox.ConnectionOwner, error) {
+	return nil, nil
+}
+
+func (e *EngineWrapper) StartDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
+	return nil
+}
+
+func (e *EngineWrapper) CloseDefaultInterfaceMonitor(listener libbox.InterfaceUpdateListener) error {
+	return nil
+}
+
+func (e *EngineWrapper) GetInterfaces() (libbox.NetworkInterfaceIterator, error) {
+	return nil, nil
+}
+
+func (e *EngineWrapper) UnderNetworkExtension() bool {
+	return false
+}
+
+func (e *EngineWrapper) IncludeAllNetworks() bool {
+	return false
+}
+
+func (e *EngineWrapper) ReadWIFIState() *libbox.WIFIState {
+	return nil
+}
+
+func (e *EngineWrapper) SystemCertificates() libbox.StringIterator {
+	return nil
+}
+
+func (e *EngineWrapper) ClearDNSCache() {}
+
+func (e *EngineWrapper) SendNotification(notification *libbox.Notification) error {
+	return nil
+}
+
+func (e *EngineWrapper) Start(configJSON string) error {
+	if e.server == nil {
+		return fmt.Errorf("command server is nil")
+	}
+	return e.server.StartOrReloadService(configJSON, nil)
+}
+
+func (e *EngineWrapper) Stop() error {
+	if e.server != nil {
+		return e.server.CloseService()
 	}
 	return nil
 }
