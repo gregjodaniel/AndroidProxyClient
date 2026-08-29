@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Android Proxy</string>
+    <string name="status_disconnected">未连接</string>
+    <string name="status_connecting">正在连接...</string>
+    <string name="status_connected">已连接 - 安全保护中</string>
+    <string name="connect">点击连接</string>
+    <string name="disconnect">断开连接</string>
+    <string name="current_node">当前选中节点</string>
+    <string name="no_node_selected">未选择节点</string>
+    <string name="import_subscription">导入订阅/节点</string>
+    <string name="speedtest_all">批量测速</string>
+    <string name="route_mode">分流模式</string>
+    <string name="mode_bypass_cn">绕过大陆/LAN</string>
+    <string name="mode_global">全局代理</string>
+    <string name="mode_direct">全局直连</string>
+    <string name="node_list_title">节点列表</string>
+    <string name="empty_nodes">暂无节点，点击右上角导入订阅或节点</string>
+</resources>
