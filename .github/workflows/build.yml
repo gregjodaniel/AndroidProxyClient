@@ -49,7 +49,8 @@ jobs:
           go get golang.org/x/mobile/bind@latest
           go mod tidy
           gomobile init
-          gomobile bind -target=android -androidapi 21 -ldflags="-s -w" -o ../app/libs/libcore.aar .
+          export GOFLAGS="-ldflags=-checklinkname=0"
+          gomobile bind -target=android/arm64,android/arm,android/amd64 -androidapi 21 -ldflags="-s -w -checklinkname=0" -o ../app/libs/libcore.aar .
           ls -lh ../app/libs/
           cd ..
 
@@ -80,8 +81,8 @@ jobs:
             基于 **官方 SingBox v1.13.20 SFA (SingBox For Android) 平台架构** 的开源高性能 Android 代理客户端。
 
             ### 🚀 终极架构对接 (v1.0.5)
-            - 🌟 **全接入官方 libbox.PlatformInterface**：实现 `OpenTun()` 动态建立与绑定 Android `VpnService` TUN 接口，`AutoDetectInterfaceControl` 实时注入 Socket Protect。
-            - 🌟 **标准 TUN Inbound (`auto_route: true`)**：彻底解决此前手动传 FD 被 SingBox 忽略的根本问题。
+            - 🌟 **全接入官方 CommandServer & PlatformInterface**：动态建立与绑定 Android `VpnService` TUN 接口，`AutoDetectInterfaceControl` 实时注入 Socket Protect。
+            - 🌟 **标准 TUN Inbound (`auto_route: true`)**：完美接管 Android 系统全局流量。
             - 🌟 **SingBox v1.13.20 最新生产内核**。
 
             ### 📥 下载安装
