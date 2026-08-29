@@ -45,10 +45,9 @@ jobs:
           cd core
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
-          go get golang.org/x/mobile/bind@latest
           go mod tidy
           gomobile init
-          gomobile bind -target=android -androidapi 21 -javapkg=corebridge -ldflags="-s -w" -o ../app/libs/libcore.aar .
+          gomobile bind -target=android -androidapi 21 -ldflags="-s -w" -o ../app/libs/libcore.aar .
           ls -lh ../app/libs/
           cd ..
 
