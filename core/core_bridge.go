@@ -2,6 +2,7 @@ package corebridge
 
 import (
 	"context"
+	"encoding/json"
 	"syscall"
 
 	box "github.com/sagernet/sing-box"
@@ -45,7 +46,8 @@ func (e *EngineWrapper) DialControl(network, address string, c syscall.RawConn) 
 
 // Start 启动 sing-box 实例
 func (e *EngineWrapper) Start(configJSON string) error {
-	opts, err := option.UnmarshalOptions([]byte(configJSON))
+	var opts option.Options
+	err := json.Unmarshal([]byte(configJSON), &opts)
 	if err != nil {
 		return err
 	}
