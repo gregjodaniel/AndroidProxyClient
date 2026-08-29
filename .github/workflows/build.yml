@@ -61,35 +61,35 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.0.8.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.0.9.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.0.8
-          path: release_output/AndroidProxyClient-v1.0.8.apk
+          name: AndroidProxyClient-v1.0.9
+          path: release_output/AndroidProxyClient-v1.0.9.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.0.8
-          name: "Android Proxy Client v1.0.8 (Release - Standardized SingBox Route & Exception Extraction)"
+          tag_name: v1.0.9
+          name: "Android Proxy Client v1.0.9 (Release - Fixed Context Registries & Full Startup)"
           body: |
-            ## Android Proxy Client v1.0.8
+            ## Android Proxy Client v1.0.9
 
             基于 **SingBox v1.13.20 + gVisor Tun2Socks** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 关键修复 (v1.0.8)
-            - 🌟 **修复 SingBox 路由规则规范（final outbound）**：消除空路由规则匹配项导致内核拒绝初始化的致命问题。
-            - 🌟 **完善反射异常根因穿透提取（InvocationTargetException unwrapping）**：彻底解包底层真实错误并展示。
-            - 🌟 **SingBox v1.13.20 + gVisor Tun2Socks 稳定引擎**。
+            ### 🚀 关键修复 (v1.0.9)
+            - 🌟 **注入 SingBox 完整协议注册表 (include registries into box.Context)**：解决 `missing endpoint registry in context` 导致内核无法实例化的底层问题。
+            - 🌟 **完整支持所有 VLESS / VMess / Shadowsocks / Hysteria2 节点与 Cloudflare CDN 优选**。
+            - 🌟 **纯用户态 gVisor TUN 拦截驱动，零崩溃**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.8.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.9.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.0.8.apk
+          files: release_output/AndroidProxyClient-v1.0.9.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	box "github.com/sagernet/sing-box"
-	_ "github.com/sagernet/sing-box/include"
+	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
 	_ "golang.org/x/mobile/bind"
 	"github.com/xjasonlyu/tun2socks/v2/engine"
@@ -16,6 +16,7 @@ import (
 var (
 	mu       sync.Mutex
 	instance *box.Box
+	cancel   context.CancelFunc
 	started  bool
 )
 
@@ -29,22 +30,33 @@ func StartProxy(configJSON string, tunFd int) error {
 	var opts option.Options
 	err := json.Unmarshal([]byte(configJSON), &opts)
 	if err != nil {
-		return fmt.Errorf("配置JSON解析失败: %v", err)
+		return fmt.Errorf("配置JSON解析失败: %w", err)
 	}
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	ctx = box.Context(
+		ctx,
+		include.InboundRegistry(),
+		include.OutboundRegistry(),
+		include.EndpointRegistry(),
+	)
+
 	boxInst, err := box.New(box.Options{
-		Context: context.Background(),
+		Context: ctx,
 		Options: opts,
 	})
 	if err != nil {
-		return fmt.Errorf("SingBox配置初始化失败: %v", err)
+		cancelFunc()
+		return fmt.Errorf("SingBox配置初始化失败: %w", err)
 	}
 
 	err = boxInst.Start()
 	if err != nil {
-		return fmt.Errorf("SingBox启动失败: %v", err)
+		cancelFunc()
+		return fmt.Errorf("SingBox启动失败: %w", err)
 	}
 	instance = boxInst
+	cancel = cancelFunc
 
 	if tunFd > 0 {
 		key := &engine.Key{
@@ -53,7 +65,11 @@ func StartProxy(configJSON string, tunFd int) error {
 			MTU:    1500,
 		}
 		engine.Insert(key)
-		engine.Start()
+		err = engine.Start()
+		if err != nil {
+			stopInternal()
+			return fmt.Errorf("tun2socks启动失败: %w", err)
+		}
 		started = true
 	}
 
@@ -75,7 +91,15 @@ func stopInternal() error {
 	if instance != nil {
 		err := instance.Close()
 		instance = nil
+		if cancel != nil {
+			cancel()
+			cancel = nil
+		}
 		return err
+	}
+	if cancel != nil {
+		cancel()
+		cancel = nil
 	}
 	return nil
 }
