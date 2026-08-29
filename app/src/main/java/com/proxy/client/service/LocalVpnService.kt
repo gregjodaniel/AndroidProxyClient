@@ -32,8 +32,7 @@ class LocalVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         proxyEngine = SingBoxEngine(
-            protector = { fd -> this.protect(fd) },
-            openTunProvider = {
+            tunFdProvider = {
                 val fd = setupVpnInterface() ?: throw RuntimeException("建立TUN接口失败，请检查系统VPN权限")
                 fd
             }

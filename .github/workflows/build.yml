@@ -47,6 +47,7 @@ jobs:
           go install golang.org/x/mobile/cmd/gobind@latest
           go install golang.org/x/mobile/cmd/gomobile@latest
           go get golang.org/x/mobile/bind@latest
+          go get github.com/xjasonlyu/tun2socks/v2@v2.7.0
           go mod tidy
           gomobile init
           export GOFLAGS="-ldflags=-checklinkname=0"
@@ -60,36 +61,36 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.1.0.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.1.1.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.1.0
-          path: release_output/AndroidProxyClient-v1.1.0.apk
+          name: AndroidProxyClient-v1.1.1
+          path: release_output/AndroidProxyClient-v1.1.1.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.0
-          name: "Android Proxy Client v1.1.0 (Release - Official SFA SingBox v1.13.20 Architecture)"
+          tag_name: v1.1.1
+          name: "Android Proxy Client v1.1.1 (Release - Complete Fixed Architecture with include.Context)"
           body: |
-            ## Android Proxy Client v1.1.0
+            ## Android Proxy Client v1.1.1
 
-            基于 **官方 SingBox v1.13.20 SFA (SingBox For Android) 核心容器** 的开源高性能 Android 代理客户端。
+            基于 **SingBox v1.13.20 (include.Context 自动注册) + gVisor Tun2Socks v2.7.0** 生产级纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 终极完整修复 (v1.1.0)
-            - 🌟 **官方 SFA 内核架构（CommandServer + PlatformBridge）**：SingBox 官方为 Android 定制的平台抽象容器，自动管理所有协议注册表。
-            - 🌟 **智能大小写反射匹配（newEngine/NewEngine）**：彻底解决 gomobile JNI 导出方法名驼峰化导致的反射异常。
-            - 🌟 **规范化 SingBox 路由规则（`final: <outbound>`）**：消除空路由规则校验失败。
+            ### 🚀 核心优化与修复 (v1.1.1)
+            - 🌟 **采用 `include.Context(context.Background())`**：一键注入 SingBox 全部协议与服务注册表，彻底解决 `missing endpoint registry in context`。
+            - 🌟 **升级 gVisor Tun2Socks 至 v2.7.0**：修复多次“连接-断开-重连”导致的 TUN 文件描述符重复释放问题。
+            - 🌟 **规范化 SingBox 路由规则（`final: <outbound>`）与 Mixed 本地入站**。
             - 🌟 **完整支持 VLESS / VMess / Shadowsocks / Hysteria2 及 Cloudflare CDN 优选**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.1.0.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.1.1.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.1.0.apk
+          files: release_output/AndroidProxyClient-v1.1.1.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
