@@ -14,16 +14,43 @@ type PlatformBridge interface {
 }
 
 type EngineWrapper struct {
-	service *libbox.BoxService
-	bridge  PlatformBridge
+	server *libbox.CommandServer
+	bridge PlatformBridge
 }
 
-func NewEngine(bridge PlatformBridge) *EngineWrapper {
-	return &EngineWrapper{
+func NewEngine(bridge PlatformBridge) (*EngineWrapper, error) {
+	e := &EngineWrapper{
 		bridge: bridge,
 	}
+	server, err := libbox.NewCommandServer(e, e)
+	if err != nil {
+		return nil, err
+	}
+	e.server = server
+	return e, nil
 }
 
+// CommandServerHandler
+func (e *EngineWrapper) ServiceStop() error {
+	return nil
+}
+
+func (e *EngineWrapper) ServiceReload() error {
+	return nil
+}
+
+func (e *EngineWrapper) GetSystemProxyStatus() (*libbox.SystemProxyStatus, error) {
+	return nil, nil
+}
+
+func (e *EngineWrapper) SetSystemProxyEnabled(enabled bool) error {
+	return nil
+}
+
+func (e *EngineWrapper) WriteDebugMessage(message string) {
+}
+
+// PlatformInterface
 func (e *EngineWrapper) LocalDNSTransport() libbox.LocalDNSTransport {
 	return nil
 }
@@ -92,23 +119,15 @@ func (e *EngineWrapper) SendNotification(notification *libbox.Notification) erro
 }
 
 func (e *EngineWrapper) Start(configJSON string) error {
-	service, err := libbox.NewService(configJSON, e)
-	if err != nil {
-		return err
+	if e.server == nil {
+		return fmt.Errorf("command server is nil")
 	}
-	err = service.Start()
-	if err != nil {
-		return err
-	}
-	e.service = service
-	return nil
+	return e.server.StartOrReloadService(configJSON, nil)
 }
 
 func (e *EngineWrapper) Stop() error {
-	if e.service != nil {
-		err := e.service.Close()
-		e.service = nil
-		return err
+	if e.server != nil {
+		return e.server.CloseService()
 	}
 	return nil
 }
