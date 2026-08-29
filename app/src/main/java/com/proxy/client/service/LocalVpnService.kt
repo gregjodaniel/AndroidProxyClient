@@ -34,7 +34,7 @@ class LocalVpnService : VpnService() {
         proxyEngine = SingBoxEngine(
             protector = { fd -> this.protect(fd) },
             openTunProvider = {
-                val fd = setupVpnInterface() ?: throw RuntimeException("establish TUN failed")
+                val fd = setupVpnInterface() ?: throw RuntimeException("建立TUN接口失败: VpnService.Builder().establish() 返回了null，请检查系统VPN权限")
                 fd
             }
         )
@@ -67,7 +67,9 @@ class LocalVpnService : VpnService() {
             ACTION_START -> {
                 val node = pendingNode
                 if (node == null) {
-                    Log.e(TAG, "没有选中的节点(pendingNode为空),无法启动VPN")
+                    val err = "没有选中的节点(pendingNode为空),无法启动VPN"
+                    Log.e(TAG, err)
+                    _lastError.value = err
                     stopSelf()
                     return START_NOT_STICKY
                 }
@@ -76,14 +78,18 @@ class LocalVpnService : VpnService() {
 
                 serviceScope.launch {
                     try {
+                        _lastError.value = null
                         val configJson = SingBoxConfigBuilder()
                             .setRouteMode(pendingRouteMode)
                             .addProxyNode(node)
                             .build(node.tag)
 
+                        Log.d(TAG, "生成的 SingBox 配置 JSON:\n$configJson")
                         proxyEngine.start(configJson)
                     } catch (e: Exception) {
-                        Log.e(TAG, "启动VPN失败", e)
+                        val errMsg = e.message ?: e.toString()
+                        Log.e(TAG, "启动VPN失败: $errMsg", e)
+                        _lastError.value = errMsg
                         stopVpn()
                     }
                 }
@@ -185,6 +191,9 @@ class LocalVpnService : VpnService() {
 
         private val _vpnStats = MutableStateFlow(TrafficStats())
         val vpnStats: StateFlow<TrafficStats> = _vpnStats.asStateFlow()
+
+        private val _lastError = MutableStateFlow<String?>(null)
+        val lastError: StateFlow<String?> = _lastError.asStateFlow()
 
         fun startService(context: Context) {
             val intent = Intent(context, LocalVpnService::class.java).apply {

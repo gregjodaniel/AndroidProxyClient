@@ -60,35 +60,35 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.0.5.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.0.6.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.0.5
-          path: release_output/AndroidProxyClient-v1.0.5.apk
+          name: AndroidProxyClient-v1.0.6
+          path: release_output/AndroidProxyClient-v1.0.6.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.0.5
-          name: "Android Proxy Client v1.0.5 (Release - Official SFA Libbox Architecture)"
+          tag_name: v1.0.6
+          name: "Android Proxy Client v1.0.6 (Release - Robust Gomobile Reflection & Diagnostic)"
           body: |
-            ## Android Proxy Client v1.0.5
+            ## Android Proxy Client v1.0.6
 
             基于 **官方 SingBox v1.13.20 SFA (SingBox For Android) 平台架构** 的开源高性能 Android 代理客户端。
 
-            ### 🚀 终极架构对接 (v1.0.5)
-            - 🌟 **全接入官方 CommandServer & PlatformInterface**：动态建立与绑定 Android `VpnService` TUN 接口，`AutoDetectInterfaceControl` 实时注入 Socket Protect。
-            - 🌟 **标准 TUN Inbound (`auto_route: true`)**：完美接管 Android 系统全局流量。
+            ### 🚀 关键修复 (v1.0.6)
+            - 🌟 **修复 Gomobile 反射方法签名匹配**：解决大小写敏感（`newEngine` vs `NewEngine`）导致的原生内核反射调用静默失败。
+            - 🌟 **增加前台实时错误诊断弹窗**：启动遇到任何异常均会实时弹窗展示具体错误。
             - 🌟 **SingBox v1.13.20 最新生产内核**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.5.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.0.6.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.0.5.apk
+          files: release_output/AndroidProxyClient-v1.0.6.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
