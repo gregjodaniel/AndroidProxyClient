@@ -31,7 +31,13 @@ class LocalVpnService : VpnService() {
 
     override fun onCreate() {
         super.onCreate()
-        proxyEngine = SingBoxEngine(protector = { fd -> this.protect(fd) })
+        proxyEngine = SingBoxEngine(
+            protector = { fd -> this.protect(fd) },
+            openTunProvider = {
+                val fd = setupVpnInterface() ?: throw RuntimeException("establish TUN failed")
+                fd
+            }
+        )
         serviceScope.launch {
             proxyEngine.state.collect { state ->
                 _vpnState.value = state
@@ -70,22 +76,10 @@ class LocalVpnService : VpnService() {
 
                 serviceScope.launch {
                     try {
-                        val fd = setupVpnInterface()
-                        if (fd == null) {
-                            Log.e(TAG, "建立TUN接口失败(builder.establish()返回null),可能是用户拒绝了VPN权限弹窗")
-                            stopVpn()
-                            return@launch
-                        }
-
-                        // 关键修复:build()现在必须传入真实的TUN fd。
-                        // 之前的版本在MainActivity里提前拼好了configJson,
-                        // 那时候TUN还没建立,自然拿不到fd,只能靠sing-box自己
-                        // 的auto_route=true去尝试建TUN——这在非root应用里
-                        // 是做不到的,是流量进TUN后没有下文的根本原因。
                         val configJson = SingBoxConfigBuilder()
                             .setRouteMode(pendingRouteMode)
                             .addProxyNode(node)
-                            .build(node.tag, fd)
+                            .build(node.tag)
 
                         proxyEngine.start(configJson)
                     } catch (e: Exception) {
@@ -99,7 +93,6 @@ class LocalVpnService : VpnService() {
         return START_STICKY
     }
 
-    /** @return 建立成功返回TUN的文件描述符,失败返回null */
     private fun setupVpnInterface(): Int? {
         if (vpnInterface != null) return vpnInterface?.fd
 
@@ -111,11 +104,6 @@ class LocalVpnService : VpnService() {
             addDnsServer("1.1.1.1")
             addDnsServer("8.8.8.8")
             try {
-                // 把本App自己排除在VPN路由之外。这样做还有一个好处:
-                // sing-box内核运行在本App的进程里,它自己拨号连接代理服务器
-                // 产生的socket,因为属于本App的UID,会天然不被TUN再次拦截,
-                // 不会形成死循环——这是protect()机制之外的另一层保险,
-                // 两者不冲突,同时生效更稳妥。
                 addDisallowedApplication(packageName)
             } catch (e: Exception) {
                 Log.w(TAG, "addDisallowedApplication失败,继续尝试建立VPN", e)
@@ -189,11 +177,6 @@ class LocalVpnService : VpnService() {
         const val ACTION_START = "com.proxy.client.ACTION_START"
         const val ACTION_STOP = "com.proxy.client.ACTION_STOP"
 
-        // 用静态字段传递"选中的节点"和"分流模式"这两个决策结果,
-        // 真正的配置JSON要等LocalVpnService建好TUN、拿到fd之后才拼装。
-        // (和EXTRA_CONFIG_JSON方案相比的取舍:更简单,但进程被杀会丢失,
-        // 后续如果要做"进程重启后自动恢复连接",这里要换成从NodeRepository
-        // 的持久化存储里重新读取,而不是依赖内存里的静态变量)
         var pendingNode: ProxyNodeConfig? = null
         var pendingRouteMode: RouteMode = RouteMode.RULE
 

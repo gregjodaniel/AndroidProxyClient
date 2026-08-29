@@ -24,7 +24,7 @@ class SingBoxConfigBuilder {
         outbounds.add(OutboundJsonAdapter.toJson(node))
     }
 
-    fun build(activeOutboundTag: String, tunFd: Int): String {
+    fun build(activeOutboundTag: String): String {
         val root = JSONObject()
 
         root.put("log", JSONObject().apply {
@@ -61,11 +61,10 @@ class SingBoxConfigBuilder {
             put(JSONObject().apply {
                 put("type", "tun")
                 put("tag", "tun-in")
-                put("fd", tunFd)
-                put("address", JSONArray().put("172.19.0.1/30"))
+                put("inet4_address", "172.19.0.1/30")
+                put("auto_route", true)
+                put("strict_route", true)
                 put("stack", "gvisor")
-                put("auto_route", false)
-                put("strict_route", false)
                 put("sniff", true)
             })
             put(JSONObject().apply {
