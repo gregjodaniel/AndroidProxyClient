@@ -61,36 +61,36 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.1.4.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.1.5.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.1.4
-          path: release_output/AndroidProxyClient-v1.1.4.apk
+          name: AndroidProxyClient-v1.1.5
+          path: release_output/AndroidProxyClient-v1.1.5.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.4
-          name: "Android Proxy Client v1.1.4 (Release - Robust UDP DNS & Guaranteed SNI Handshake)"
+          tag_name: v1.1.5
+          name: "Android Proxy Client v1.1.5 (Release - Exact SingBox 1.13 UDP DNS Address Fix)"
           body: |
-            ## Android Proxy Client v1.1.4
+            ## Android Proxy Client v1.1.5
 
             基于 **SingBox v1.13.20 + gVisor Tun2Socks v2.7.0** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 关键修复 (v1.1.4)
-            - 🌟 **优化隧道 DNS 协议为高可靠 UDP 模式（`8.8.8.8` / `223.5.5.5`）**：彻底消除 DNS 阶段的 TLS SNI 校验失败（`missing server_name or insecure=true`），所有 DNS 查询全程在加密代理通道内传输，速度极快且零阻断。
-            - 🌟 **强化节点出站 TLS SNI 回退保护机制**：确保所有 TLS/Reality 代理节点均具备合法的 `server_name`。
-            - 🌟 **移除 `auto_detect_interface` 解决 Netlink 限制**。
+            ### 🚀 关键修复 (v1.1.5)
+            - 🌟 **精准修复 SingBox 1.13 UDP DNS `address: "8.8.8.8"` 字段**：彻底消除 `invalid server address: :53`。
+            - 🌟 **高可靠隧道 UDP DNS 转发**：DNS 查询全程在代理节点隧道内传输，无 TLS 握手损耗，零污染零阻断。
+            - 🌟 **移除 `auto_detect_interface` 绕过 Android Netlink 权限限制**。
             - 🌟 **`include.Context(context.Background())` 全局挂载协议注册表**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.1.4.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.1.5.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.1.4.apk
+          files: release_output/AndroidProxyClient-v1.1.5.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

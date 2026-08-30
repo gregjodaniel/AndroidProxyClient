@@ -30,20 +30,20 @@ class SingBoxConfigBuilder {
             put("timestamp", true)
         })
 
-        // 标准高性能 1.13.x DNS 配置
-        // 远程 DNS 走代理节点隧道直连 8.8.8.8:53，无需额外 TLS 握手且天然被代理隧道加密保护
+        // 标准 SingBox 1.13.x RemoteDNSServerOptions
+        // 字段为 type: "udp", address: "8.8.8.8", detour: <activeOutboundTag>
         root.put("dns", JSONObject().apply {
             val servers = JSONArray().apply {
                 put(JSONObject().apply {
                     put("tag", "remote-dns")
                     put("type", "udp")
-                    put("server", "8.8.8.8")
+                    put("address", "8.8.8.8")
                     put("detour", activeOutboundTag)
                 })
                 put(JSONObject().apply {
                     put("tag", "direct-dns")
                     put("type", "udp")
-                    put("server", "223.5.5.5")
+                    put("address", "223.5.5.5")
                     put("detour", "direct-out")
                 })
                 put(JSONObject().apply {
