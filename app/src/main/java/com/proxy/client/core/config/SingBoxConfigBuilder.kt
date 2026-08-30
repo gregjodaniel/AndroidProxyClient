@@ -69,7 +69,13 @@ class SingBoxConfigBuilder {
                 put("tag", "mixed-in")
                 put("listen", "127.0.0.1")
                 put("listen_port", localSocksPort)
-                put("sniff", true)
+                // 注意:这里不再写 sniff 字段。
+                // inbound.sniff 这类"legacy inbound fields"在sing-box 1.11
+                // 就标记废弃、1.13.0直接从解析器里删掉了,写了就直接
+                // 解析报错("legacy inbound fields are deprecated...")。
+                // 官方迁移文档给的新写法是把sniff挪到route.rules里,
+                // 作为一个"action": "sniff"的规则动作,放在route那边处理,
+                // 见下面route.rules的第一条。
             })
         }
         root.put("inbounds", inbounds)
@@ -84,10 +90,6 @@ class SingBoxConfigBuilder {
             put("type", "block")
             put("tag", "block-out")
         })
-        finalOutbounds.put(JSONObject().apply {
-            put("type", "dns")
-            put("tag", "dns-out")
-        })
         root.put("outbounds", finalOutbounds)
 
         val finalOutbound = when (routeMode) {
@@ -98,13 +100,25 @@ class SingBoxConfigBuilder {
         root.put("route", JSONObject().apply {
             put("final", finalOutbound)
             val rules = JSONArray().apply {
+                // sniff必须放在规则列表最前面——官方迁移文档的原话是
+                // "sniff and resolve rule actions are typically used
+                // at the head of the rule list to ensure later rules
+                // see useful metadata"。没有这一条,后面依赖协议嗅探
+                // 结果的规则(比如下面的protocol:dns)会失效。
+                put(JSONObject().apply {
+                    put("action", "sniff")
+                })
+                // 原来是"匹配到53端口/dns协议就outbound到一个type:dns的
+                // 特殊出站",现在改成"action: hijack-dns"直接在路由层
+                // 劫持DNS请求交给dns模块处理,这是官方迁移文档给的
+                // 一一对应替换写法。
                 put(JSONObject().apply {
                     put("port", JSONArray().put(53))
-                    put("outbound", "dns-out")
+                    put("action", "hijack-dns")
                 })
                 put(JSONObject().apply {
                     put("protocol", JSONArray().put("dns"))
-                    put("outbound", "dns-out")
+                    put("action", "hijack-dns")
                 })
                 if (routeMode == RouteMode.RULE) {
                     put(JSONObject().apply {
