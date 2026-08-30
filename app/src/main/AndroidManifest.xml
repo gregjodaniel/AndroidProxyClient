@@ -4,15 +4,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- 不要加回 FOREGROUND_SERVICE_SYSTEM_EXEMPTED——这是签名级/系统级权限,
-         普通第三方App声明了也不会被系统授予。如果foregroundServiceType里
-         同时包含一个拿不到权限的类型,Android 14+校验时会因为"类型对应的
-         权限不全"直接让startForeground()抛SecurityException。
-         VPN客户端场景用specialUse就够了,不需要也不能用systemExempted。 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
+        android:name=".ProxyApp"
         android:allowBackup="false"
         android:icon="@android:drawable/sym_def_app_icon"
         android:label="AndroidProxy"

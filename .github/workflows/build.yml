@@ -61,36 +61,39 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.1.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.2.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.2.1
-          path: release_output/AndroidProxyClient-v1.2.1.apk
+          name: AndroidProxyClient-v1.2.2
+          path: release_output/AndroidProxyClient-v1.2.2.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.2.1
-          name: "Android Proxy Client v1.2.1 (Release - Safe Tun2Socks API v8-fixed)"
+          tag_name: v1.2.2
+          name: "Android Proxy Client v1.2.2 (Release - Zero Crash Recovery and Diagnostics)"
           body: |
-            ## Android Proxy Client v1.2.1
+            ## Android Proxy Client v1.2.2
 
             基于 **SingBox v1.13.20 + gVisor Tun2Socks v2.7.0** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 终极关键修复 (v1.2.1 / v8-fixed)
-            - 🌟 **彻底根除进程闪退（绕过 `engine.Start()` 的 `log.Fatalf` 自杀式退出）**：直接调用底层安全 API（`fdbased.Open`, `proxy.Parse`, `core.CreateStack`），所有异常均以标准 Go error 安全回传至 UI 弹窗，杜绝任何静默闪退。
-            - 🌟 **SingBox 1.13+ DNS Detour 修复**：移除 direct-dns / local-dns 的冗余 direct detour。
-            - 🌟 **SingBox 1.13+ Rule Actions 规范**：`{"action": "sniff"}` 与 `{"action": "hijack-dns"}`。
+            ### 🚀 终极关键修复与诊断保护 (v1.2.2)
+            - 🌟 **全链路 Panic / Crash 异常捕获与诊断展示**：
+              - 在 `core_bridge.go` 所有 Go 接口中配置全局 `recover()` 守护，将底层 Panic 转化为标准错误；
+              - 引入 `ProxyApp` 全局未捕获异常捕获器，若发生任何异常自动持久化日志并在重新打开应用时以弹窗完整展示堆栈。
+            - 🌟 **安全 Tun2Socks API（`fdbased.Open`, `proxy.Parse`, `core.CreateStack`）**。
+            - 🌟 **SingBox 1.13+ DNS Detour 修复**。
+            - 🌟 **SingBox 1.13+ Rule Actions 规范**。
             - 🌟 **核心 Go 桥接层 `opts.UnmarshalJSONContext(ctx, ...)`**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.1.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.2.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.2.1.apk
+          files: release_output/AndroidProxyClient-v1.2.2.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

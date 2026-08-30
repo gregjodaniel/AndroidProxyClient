@@ -1,6 +1,7 @@
 package com.proxy.client
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -54,6 +55,7 @@ class MainActivity : AppCompatActivity() {
         repository = NodeRepository.getInstance(this)
         setupUI()
         observeData()
+        checkPreviousCrash()
     }
 
     private fun setupUI() {
@@ -364,5 +366,23 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("取消", null)
             .show()
+    }
+
+    private fun checkPreviousCrash() {
+        val prefs = getSharedPreferences("proxy_client_prefs", Context.MODE_PRIVATE)
+        val crashLog = prefs.getString("KEY_LAST_CRASH", null)
+        if (!crashLog.isNullOrBlank()) {
+            prefs.edit().remove("KEY_LAST_CRASH").apply()
+            MaterialAlertDialogBuilder(this)
+                .setTitle("应用异常退出日志")
+                .setMessage(crashLog)
+                .setPositiveButton("确定", null)
+                .setNeutralButton("复制日志") { _, _ ->
+                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Crash Log", crashLog))
+                    Toast.makeText(this, "日志已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                }
+                .show()
+        }
     }
 }
