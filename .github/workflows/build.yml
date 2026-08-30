@@ -61,36 +61,36 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.0.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.1.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.2.0
-          path: release_output/AndroidProxyClient-v1.2.0.apk
+          name: AndroidProxyClient-v1.2.1
+          path: release_output/AndroidProxyClient-v1.2.1.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.2.0
-          name: "Android Proxy Client v1.2.0 (Release - Direct DNS Detour Fix v7-fixed)"
+          tag_name: v1.2.1
+          name: "Android Proxy Client v1.2.1 (Release - Safe Tun2Socks API v8-fixed)"
           body: |
-            ## Android Proxy Client v1.2.0
+            ## Android Proxy Client v1.2.1
 
             基于 **SingBox v1.13.20 + gVisor Tun2Socks v2.7.0** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 终极关键修复 (v1.2.0 / v7-fixed)
-            - 🌟 **移除 direct-dns / local-dns 的冗余 `detour: direct-out`**：彻底解决 SingBox 启动阶段（`Start()`）对空 direct 出站 detour 校验导致的拒绝启动（`start dns/udp[direct-dns]` 错误）。
-            - 🌟 **保留 remote-dns 对代理节点的 `detour` 保护**：远程 DNS 依然 100% 在代理隧道内传输。
+            ### 🚀 终极关键修复 (v1.2.1 / v8-fixed)
+            - 🌟 **彻底根除进程闪退（绕过 `engine.Start()` 的 `log.Fatalf` 自杀式退出）**：直接调用底层安全 API（`fdbased.Open`, `proxy.Parse`, `core.CreateStack`），所有异常均以标准 Go error 安全回传至 UI 弹窗，杜绝任何静默闪退。
+            - 🌟 **SingBox 1.13+ DNS Detour 修复**：移除 direct-dns / local-dns 的冗余 direct detour。
             - 🌟 **SingBox 1.13+ Rule Actions 规范**：`{"action": "sniff"}` 与 `{"action": "hijack-dns"}`。
             - 🌟 **核心 Go 桥接层 `opts.UnmarshalJSONContext(ctx, ...)`**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.0.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.1.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.2.0.apk
+          files: release_output/AndroidProxyClient-v1.2.1.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
