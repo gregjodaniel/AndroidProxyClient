@@ -9,7 +9,6 @@ class SingBoxConfigBuilder {
     private var localSocksPort: Int = 2080
     private var routeMode: RouteMode = RouteMode.RULE
     private val outbounds = mutableListOf<JSONObject>()
-    private val outboundAdapter = OutboundJsonAdapter()
 
     fun setLocalSocksPort(port: Int): SingBoxConfigBuilder {
         this.localSocksPort = port
@@ -22,7 +21,7 @@ class SingBoxConfigBuilder {
     }
 
     fun addProxyNode(node: ProxyNodeConfig): SingBoxConfigBuilder {
-        val outbound = outboundAdapter.toJson(node)
+        val outbound = OutboundJsonAdapter.toJson(node)
         outbounds.add(outbound)
         return this
     }
