@@ -30,25 +30,22 @@ class SingBoxConfigBuilder {
             put("timestamp", true)
         })
 
-        // 标准 SingBox 1.13.x RemoteDNSServerOptions
-        // 字段为 type: "udp", address: "8.8.8.8", detour: <activeOutboundTag>
+        // 标准 SingBox 1.13.x DNS Server URI 格式 (udp://8.8.8.8, udp://223.5.5.5, local)
         root.put("dns", JSONObject().apply {
             val servers = JSONArray().apply {
                 put(JSONObject().apply {
                     put("tag", "remote-dns")
-                    put("type", "udp")
-                    put("address", "8.8.8.8")
+                    put("address", "udp://8.8.8.8")
                     put("detour", activeOutboundTag)
                 })
                 put(JSONObject().apply {
                     put("tag", "direct-dns")
-                    put("type", "udp")
-                    put("address", "223.5.5.5")
+                    put("address", "udp://223.5.5.5")
                     put("detour", "direct-out")
                 })
                 put(JSONObject().apply {
                     put("tag", "local-dns")
-                    put("type", "local")
+                    put("address", "local")
                     put("detour", "direct-out")
                 })
             }
