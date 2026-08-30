@@ -1,12 +1,10 @@
 package com.proxy.client
 
-import (
-    android.app.Application
-    android.content.Context
-    android.content.SharedPreferences
-    android.util.Log
-    java.io.PrintWriter
-    java.io.StringWriter
+import android.app.Application
+import android.content.Context
+import android.util.Log
+import java.io.PrintWriter
+import java.io.StringWriter
 
 class ProxyApp : Application() {
 
