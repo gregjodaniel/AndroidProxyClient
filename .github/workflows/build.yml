@@ -61,39 +61,38 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.2.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.3.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.2.2
-          path: release_output/AndroidProxyClient-v1.2.2.apk
+          name: AndroidProxyClient-v1.2.3
+          path: release_output/AndroidProxyClient-v1.2.3.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.2.2
-          name: "Android Proxy Client v1.2.2 (Release - Zero Crash Recovery and Diagnostics)"
+          tag_name: v1.2.3
+          name: "Android Proxy Client v1.2.3 (Release - Full Panic Stack Trace & Diagnostic)"
           body: |
-            ## Android Proxy Client v1.2.2
+            ## Android Proxy Client v1.2.3
 
             基于 **SingBox v1.13.20 + gVisor Tun2Socks v2.7.0** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 终极关键修复与诊断保护 (v1.2.2)
-            - 🌟 **全链路 Panic / Crash 异常捕获与诊断展示**：
-              - 在 `core_bridge.go` 所有 Go 接口中配置全局 `recover()` 守护，将底层 Panic 转化为标准错误；
-              - 引入 `ProxyApp` 全局未捕获异常捕获器，若发生任何异常自动持久化日志并在重新打开应用时以弹窗完整展示堆栈。
+            ### 🚀 终极关键修复与诊断增强 (v1.2.3)
+            - 🌟 **Go 底层全栈 Panic 堆栈追踪输出**：当底层发生异常时，直接将完整调用栈打印到弹窗，一秒定位到确切的方法和行号。
+            - 🌟 **全局未捕获异常捕获器 (`ProxyApp`)**。
             - 🌟 **安全 Tun2Socks API（`fdbased.Open`, `proxy.Parse`, `core.CreateStack`）**。
             - 🌟 **SingBox 1.13+ DNS Detour 修复**。
             - 🌟 **SingBox 1.13+ Rule Actions 规范**。
             - 🌟 **核心 Go 桥接层 `opts.UnmarshalJSONContext(ctx, ...)`**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.2.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.3.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.2.2.apk
+          files: release_output/AndroidProxyClient-v1.2.3.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

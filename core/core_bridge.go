@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"sync"
 
@@ -31,7 +32,7 @@ var (
 func StartProxy(configJSON string, tunFd int) (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			retErr = fmt.Errorf("Go内核Panic异常: %v", r)
+			retErr = fmt.Errorf("Go内核Panic异常: %v\n[Stack]\n%s", r, string(debug.Stack()))
 		}
 	}()
 
@@ -40,7 +41,6 @@ func StartProxy(configJSON string, tunFd int) (retErr error) {
 
 	stopInternal()
 
-	// 用include.Context()挂上sing-box内置的协议/DNS/服务注册表
 	ctx := include.Context(context.Background())
 
 	var opts option.Options
@@ -64,8 +64,10 @@ func StartProxy(configJSON string, tunFd int) (retErr error) {
 
 	if tunFd > 0 {
 		if err := startTun2Socks(tunFd); err != nil {
-			boxInst.Close()
-			instance = nil
+			if instance != nil {
+				_ = instance.Close()
+				instance = nil
+			}
 			return fmt.Errorf("tun2socks启动失败: %v", err)
 		}
 	}
@@ -76,13 +78,13 @@ func StartProxy(configJSON string, tunFd int) (retErr error) {
 func startTun2Socks(tunFd int) (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			retErr = fmt.Errorf("tun2socks Panic: %v", r)
+			retErr = fmt.Errorf("startTun2Socks Panic: %v\n[Stack]\n%s", r, string(debug.Stack()))
 		}
 	}()
 
 	dev, err := fdbased.Open(strconv.Itoa(tunFd), 1500, 0)
 	if err != nil {
-		return fmt.Errorf("打开TUN设备失败: %w", err)
+		return fmt.Errorf("打开TUN设备(FD %d)失败: %w", tunFd, err)
 	}
 
 	proxyURL, err := url.Parse("socks5://127.0.0.1:2080")
@@ -121,7 +123,7 @@ func startTun2Socks(tunFd int) (retErr error) {
 func StopProxy() (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			retErr = fmt.Errorf("StopProxy Panic: %v", r)
+			retErr = fmt.Errorf("StopProxy Panic: %v\n[Stack]\n%s", r, string(debug.Stack()))
 		}
 	}()
 
@@ -133,7 +135,7 @@ func StopProxy() (retErr error) {
 func stopInternal() (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			retErr = fmt.Errorf("stopInternal Panic: %v", r)
+			retErr = fmt.Errorf("stopInternal Panic: %v\n[Stack]\n%s", r, string(debug.Stack()))
 		}
 	}()
 
