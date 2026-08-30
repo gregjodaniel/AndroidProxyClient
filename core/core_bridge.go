@@ -32,6 +32,10 @@ var (
 func StartProxy(configJSON string, tunFd int) (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
+			if instance != nil {
+				_ = instance.Close()
+				instance = nil
+			}
 			retErr = fmt.Errorf("Go内核Panic异常: %v\n[Stack]\n%s", r, string(debug.Stack()))
 		}
 	}()
@@ -56,11 +60,13 @@ func StartProxy(configJSON string, tunFd int) (retErr error) {
 	if err != nil {
 		return fmt.Errorf("SingBox配置初始化失败: %v", err)
 	}
+	instance = boxInst
 
 	if err := boxInst.Start(); err != nil {
+		_ = instance.Close()
+		instance = nil
 		return fmt.Errorf("SingBox启动失败: %v", err)
 	}
-	instance = boxInst
 
 	if tunFd > 0 {
 		if err := startTun2Socks(tunFd); err != nil {
