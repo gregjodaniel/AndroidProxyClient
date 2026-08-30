@@ -43,12 +43,25 @@ class SingBoxConfigBuilder {
                     put("tag", "direct-dns")
                     put("type", "udp")
                     put("server", "223.5.5.5")
-                    put("detour", "direct-out")
+                    // 注意:这里不写 detour: "direct-out"。
+                    // 我们的direct-out出站是最简单的
+                    // {"type": "direct", "tag": "direct-out"},
+                    // 没有bind_interface/domain_strategy这些能体现
+                    // "特殊之处"的字段。sing-box在这种情况下认为
+                    // "detour到一个什么都没配的direct出站"和
+                    // "压根不写detour"没有任何区别,属于多余声明,
+                    // 直接拒绝启动("detour to an empty direct
+                    // outbound makes no sense")。这是sing-box官方
+                    // issue区里很多人踩过的同一个坑,统一的解决办法
+                    // 就是把detour删掉——不写detour,DNS查询本身
+                    // 走的仍然是这条连接默认的路由路径,效果一样。
                 })
                 put(JSONObject().apply {
                     put("tag", "local-dns")
                     put("type", "local")
-                    put("detour", "direct-out")
+                    // local类型的DNS server本身就是调用系统本地解析库,
+                    // 不会真的对外拨号连接,detour对它没有实际意义,
+                    // 同样会撞上"detour到空direct出站"的校验,去掉。
                 })
             }
             put("servers", servers)

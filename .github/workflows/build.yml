@@ -61,39 +61,36 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.1.9.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.0.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.1.9
-          path: release_output/AndroidProxyClient-v1.1.9.apk
+          name: AndroidProxyClient-v1.2.0
+          path: release_output/AndroidProxyClient-v1.2.0.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.9
-          name: "Android Proxy Client v1.1.9 (Release - v6-fixed with SingBox 1.13 Rule Actions)"
+          tag_name: v1.2.0
+          name: "Android Proxy Client v1.2.0 (Release - Direct DNS Detour Fix v7-fixed)"
           body: |
-            ## Android Proxy Client v1.1.9
+            ## Android Proxy Client v1.2.0
 
             基于 **SingBox v1.13.20 + gVisor Tun2Socks v2.7.0** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 终极关键修复 (v1.1.9 / v6-fixed)
-            - 🌟 **适配 SingBox 1.13+ 官方最新规范 (Rule Actions)**：
-              - 移除了 inbound 中的 `sniff` 废弃字段（解决 `legacy inbound fields are deprecated in sing-box 1.11.0 and removed in sing-box 1.13.0`）；
-              - 在 `route.rules` 首部注入 `{"action": "sniff"}`；
-              - 使用 `{"action": "hijack-dns"}` 替代旧的 `outbound: dns-out`。
+            ### 🚀 终极关键修复 (v1.2.0 / v7-fixed)
+            - 🌟 **移除 direct-dns / local-dns 的冗余 `detour: direct-out`**：彻底解决 SingBox 启动阶段（`Start()`）对空 direct 出站 detour 校验导致的拒绝启动（`start dns/udp[direct-dns]` 错误）。
+            - 🌟 **保留 remote-dns 对代理节点的 `detour` 保护**：远程 DNS 依然 100% 在代理隧道内传输。
+            - 🌟 **SingBox 1.13+ Rule Actions 规范**：`{"action": "sniff"}` 与 `{"action": "hijack-dns"}`。
             - 🌟 **核心 Go 桥接层 `opts.UnmarshalJSONContext(ctx, ...)`**。
-            - 🌟 **标准 DNS 规范**：`"type": "udp", "server": "8.8.8.8"` 与 `"type": "local"`。
-            - 🌟 **移除 `auto_detect_interface` 绕过 Android Netlink 权限限制**。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.1.9.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.0.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.1.9.apk
+          files: release_output/AndroidProxyClient-v1.2.0.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
