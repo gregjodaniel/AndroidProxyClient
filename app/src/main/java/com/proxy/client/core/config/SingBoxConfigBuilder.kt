@@ -30,24 +30,19 @@ class SingBoxConfigBuilder {
             put("timestamp", true)
         })
 
-        // 全版本兼容的 SingBox DNS 服务器配置
-        // 同时提供 type, server, server_port 与 address 字段，彻底避免任何字段缺失
+        // 标准 SingBox 1.13.x DNS 配置 (通过 UnmarshalJSONContext 精准解析)
         root.put("dns", JSONObject().apply {
             val servers = JSONArray().apply {
                 put(JSONObject().apply {
                     put("tag", "remote-dns")
                     put("type", "udp")
                     put("server", "8.8.8.8")
-                    put("server_port", 53)
-                    put("address", "8.8.8.8")
                     put("detour", activeOutboundTag)
                 })
                 put(JSONObject().apply {
                     put("tag", "direct-dns")
                     put("type", "udp")
                     put("server", "223.5.5.5")
-                    put("server_port", 53)
-                    put("address", "223.5.5.5")
                     put("detour", "direct-out")
                 })
                 put(JSONObject().apply {

@@ -2,7 +2,6 @@ package corebridge
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -26,22 +25,15 @@ func StartProxy(configJSON string, tunFd int) error {
 
 	stopInternal()
 
+	// 关键: 先通过 include.Context 构造包含全套协议/DNS/出站注册表的 context
+	ctx := include.Context(context.Background())
+
+	// 关键: 使用 opts.UnmarshalJSONContext(ctx, ...) 结合注册表上下文精准反序列化
 	var opts option.Options
-	err := json.Unmarshal([]byte(configJSON), &opts)
+	err := opts.UnmarshalJSONContext(ctx, []byte(configJSON))
 	if err != nil {
 		return fmt.Errorf("配置JSON解析失败: %v", err)
 	}
-
-	// 关键修复:sing-box从这个版本起,所有协议/DNS传输/服务的构造器
-	// 都通过"注册表"挂在context上,而不是像以前那样靠全局单例。
-	// 之前这里直接传 context.Background(),等于给box.New()一个空的、
-	// 什么注册表都没挂的context,box.New()内部会去context里找
-	// EndpointRegistry/InboundRegistry等,找不到就直接返回
-	// "missing endpoint registry in context"这个错误——这正是
-	// 手机上截图看到的那个报错。include.Context()会把
-	// include包(靠下面这行的副作用import)里已经注册好的
-	// 内置协议/服务,一次性挂到这个context上。
-	ctx := include.Context(context.Background())
 
 	boxInst, err := box.New(box.Options{
 		Context: ctx,
