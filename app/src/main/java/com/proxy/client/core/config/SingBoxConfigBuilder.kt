@@ -30,22 +30,29 @@ class SingBoxConfigBuilder {
             put("timestamp", true)
         })
 
-        // 标准 SingBox 1.13.x DNS Server URI 格式 (udp://8.8.8.8, udp://223.5.5.5, local)
+        // 全版本兼容的 SingBox DNS 服务器配置
+        // 同时提供 type, server, server_port 与 address 字段，彻底避免任何字段缺失
         root.put("dns", JSONObject().apply {
             val servers = JSONArray().apply {
                 put(JSONObject().apply {
                     put("tag", "remote-dns")
-                    put("address", "udp://8.8.8.8")
+                    put("type", "udp")
+                    put("server", "8.8.8.8")
+                    put("server_port", 53)
+                    put("address", "8.8.8.8")
                     put("detour", activeOutboundTag)
                 })
                 put(JSONObject().apply {
                     put("tag", "direct-dns")
-                    put("address", "udp://223.5.5.5")
+                    put("type", "udp")
+                    put("server", "223.5.5.5")
+                    put("server_port", 53)
+                    put("address", "223.5.5.5")
                     put("detour", "direct-out")
                 })
                 put(JSONObject().apply {
                     put("tag", "local-dns")
-                    put("address", "local")
+                    put("type", "local")
                     put("detour", "direct-out")
                 })
             }
