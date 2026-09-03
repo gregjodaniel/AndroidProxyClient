@@ -10,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 
+	"golang.org/x/sys/unix"
+
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
@@ -34,7 +36,7 @@ var (
 func InitCrashLogger(path string) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
-		_ = syscall.Dup2(int(f.Fd()), 2)
+		_ = unix.Dup2(int(f.Fd()), 2)
 	}
 }
 
