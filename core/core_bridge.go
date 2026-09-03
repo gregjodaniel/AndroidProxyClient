@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"runtime/debug"
 	"strconv"
 	"sync"
+	"syscall"
 
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/include"
@@ -27,6 +29,14 @@ var (
 	tunDevice device.Device
 	netStack  *gvstack.Stack
 )
+
+// InitCrashLogger redirects stderr (FD 2) to a persistent file so any Go fatal errors or panics in background goroutines are recorded
+func InitCrashLogger(path string) {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err == nil {
+		_ = syscall.Dup2(int(f.Fd()), 2)
+	}
+}
 
 // StartProxy starts the Sing-Box core and attaches tun2socks to the Android VPN fd
 func StartProxy(configJSON string, tunFd int) (retErr error) {
@@ -87,6 +97,8 @@ func startTun2Socks(tunFd int) (retErr error) {
 			retErr = fmt.Errorf("startTun2Socks Panic: %v\n[Stack]\n%s", r, string(debug.Stack()))
 		}
 	}()
+
+	_ = syscall.SetNonblock(tunFd, true)
 
 	dev, err := fdbased.Open(strconv.Itoa(tunFd), 1500, 0)
 	if err != nil {

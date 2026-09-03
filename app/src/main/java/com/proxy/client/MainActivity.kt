@@ -370,16 +370,33 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkPreviousCrash() {
         val prefs = getSharedPreferences("proxy_client_prefs", Context.MODE_PRIVATE)
-        val crashLog = prefs.getString("KEY_LAST_CRASH", null)
-        if (!crashLog.isNullOrBlank()) {
+        val javaCrashLog = prefs.getString("KEY_LAST_CRASH", null)
+        if (!javaCrashLog.isNullOrBlank()) {
             prefs.edit().remove("KEY_LAST_CRASH").apply()
+        }
+
+        val panicFile = java.io.File(filesDir, "core_panic.log")
+        val goCrashLog = if (panicFile.exists() && panicFile.length() > 0) {
+            val content = try { panicFile.readText() } catch (e: Exception) { null }
+            try { panicFile.delete() } catch (e: Exception) {}
+            content
+        } else null
+
+        val finalLog = when {
+            !javaCrashLog.isNullOrBlank() && !goCrashLog.isNullOrBlank() -> "【应用异常】\n$javaCrashLog\n\n【内核底层日志】\n$goCrashLog"
+            !javaCrashLog.isNullOrBlank() -> javaCrashLog
+            !goCrashLog.isNullOrBlank() -> "【内核底层异常日志】\n$goCrashLog"
+            else -> null
+        }
+
+        if (!finalLog.isNullOrBlank()) {
             MaterialAlertDialogBuilder(this)
                 .setTitle("应用异常退出日志")
-                .setMessage(crashLog)
+                .setMessage(finalLog)
                 .setPositiveButton("确定", null)
                 .setNeutralButton("复制日志") { _, _ ->
                     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Crash Log", crashLog))
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Crash Log", finalLog))
                     Toast.makeText(this, "日志已复制到剪贴板", Toast.LENGTH_SHORT).show()
                 }
                 .show()

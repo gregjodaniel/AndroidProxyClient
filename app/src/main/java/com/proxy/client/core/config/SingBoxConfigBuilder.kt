@@ -34,7 +34,9 @@ class SingBoxConfigBuilder {
             put("timestamp", true)
         })
 
-        // 标准 SingBox 1.13.x DNS 配置 (通过代理节点进行远程加密解析)
+        // 标准 SingBox 1.13.x DNS 配置:
+        // 1. local-dns: 使用系统原生DNS解析节点域名 (outbound: any)，避免远程DNS自循环死锁与栈溢出
+        // 2. remote-dns: 通过代理节点解密解析远程流量 (final: remote-dns)
         root.put("dns", JSONObject().apply {
             val servers = JSONArray().apply {
                 put(JSONObject().apply {
@@ -43,8 +45,20 @@ class SingBoxConfigBuilder {
                     put("server", "8.8.8.8")
                     put("detour", activeOutboundTag)
                 })
+                put(JSONObject().apply {
+                    put("tag", "local-dns")
+                    put("type", "local")
+                })
             }
             put("servers", servers)
+
+            val rules = JSONArray().apply {
+                put(JSONObject().apply {
+                    put("outbound", JSONArray().put("any"))
+                    put("server", "local-dns")
+                })
+            }
+            put("rules", rules)
             put("final", "remote-dns")
             put("strategy", "prefer_ipv4")
         })

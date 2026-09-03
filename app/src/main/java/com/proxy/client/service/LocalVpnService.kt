@@ -123,7 +123,11 @@ class LocalVpnService : VpnService() {
             try {
                 proxyEngine.stop()
             } finally {
-                vpnInterface?.close()
+                try {
+                    vpnInterface?.close()
+                } catch (e: Exception) {
+                    Log.w(TAG, "关闭 vpnInterface 异常", e)
+                }
                 vpnInterface = null
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()

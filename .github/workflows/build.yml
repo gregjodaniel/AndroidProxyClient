@@ -61,37 +61,35 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.5.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.6.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.2.5
-          path: release_output/AndroidProxyClient-v1.2.5.apk
+          name: AndroidProxyClient-v1.2.6
+          path: release_output/AndroidProxyClient-v1.2.6.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.2.5
-          name: "Android Proxy Client v1.2.5 (Release - Pure Userspace Proxy Architecture)"
+          tag_name: v1.2.6
+          name: "Android Proxy Client v1.2.6 (Release - Anti-Crash & DNS Circular Loop Fix)"
           body: |
-            ## Android Proxy Client v1.2.5
+            ## Android Proxy Client v1.2.6
 
             基于 **SingBox v1.13.20 + gVisor Tun2Socks v2.7.0** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 终极关键突破与架构纯净化 (v1.2.5)
-            - 🌟 **彻底绕过 Android Netlink 权限禁令（`netlink socket in Android is banned by Google`）**：去除 `auto_detect_interface` 和冗余的 `direct-out`，在纯用户态下只保留代理节点出站与远程安全 DNS，完全无需 Root 或 Netlink 权限！
-            - 🌟 **根除 `direct.Outbound.fetchMyAddresses` 空指针**。
-            - 🌟 **防止端口占用冲突（`bind: address already in use`）**。
-            - 🌟 **全栈 Panic 堆栈追踪与全局异常拦截器 (`ProxyApp`)**。
-            - 🌟 **安全 Tun2Socks API（`fdbased.Open`, `proxy.Parse`, `core.CreateStack`）**。
+            ### 🚀 终极关键修复 (v1.2.6)
+            - 🌟 **彻底解决连接数秒后闪退问题**：解决 DNS 循环解析死锁与栈溢出崩溃。加入 `local-dns`（系统本地安全解析）并配置 `outbound: any -> local-dns`，代理节点域名不再自循环死锁！
+            - 🌟 **Go 原生内核 Stderr 重定向与崩溃持久化记录**：新增 `initCrashLogger` 将底层致命错误定向到磁盘日志，启动时即时呈现完整调用栈。
+            - 🌟 **TUN FD 非阻塞设置与安全关闭保护**：防止多重关闭与 Epoll 资源冲突。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.5.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.6.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.2.5.apk
+          files: release_output/AndroidProxyClient-v1.2.6.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
