@@ -3,6 +3,7 @@ package corebridge
 import (
 	"context"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"os"
 	"runtime/debug"
@@ -13,9 +14,16 @@ import (
 	"golang.org/x/sys/unix"
 
 	box "github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
 	_ "golang.org/x/mobile/bind"
+
+	tun "github.com/sagernet/sing-tun"
+	"github.com/sagernet/sing/common/control"
+	"github.com/sagernet/sing/common/logger"
+	"github.com/sagernet/sing/common/x/list"
+	"github.com/sagernet/sing/service"
 
 	t2score "github.com/xjasonlyu/tun2socks/v2/core"
 	"github.com/xjasonlyu/tun2socks/v2/core/device"
@@ -58,6 +66,9 @@ func StartProxy(configJSON string, tunFd int) (retErr error) {
 	stopInternal()
 
 	ctx := include.Context(context.Background())
+	// v1.2.8: 注入 Android 平台桩, 解决 direct 出站在 Android 上
+	// 因 netlink 被禁、InterfaceMonitor 为 nil 导致的启动 panic, 详见文件底部注释。
+	ctx = service.ContextWith[adapter.PlatformInterface](ctx, &androidPlatformStub{})
 
 	var opts option.Options
 	err := opts.UnmarshalJSONContext(ctx, []byte(configJSON))
@@ -184,3 +195,73 @@ func stopInternal() (retErr error) {
 	}
 	return nil
 }
+
+// ---------------------------------------------------------------------------
+// Android 平台桩 (v1.2.8):
+// 解决 sing-box direct 出站在 Android 上因 netlink 被禁而 panic 的问题。
+//
+// 背景: direct 出站在 Start() 时会调 fetchMyAddresses(),
+// 里面取 h.network.InterfaceMonitor().MyInterfaces()。普通 Android App 里
+// Google 禁了 NETLINK_ROUTE socket, sing-tun 的 NewNetworkUpdateMonitor
+// 会返回 ErrNetlinkBanned, NetworkManager 的 interfaceMonitor 保持 nil,
+// direct 出站一启动就空指针 panic (v1.2.4 曾因此删掉 direct 出站)。
+//
+// 解法: 往 service ctx 注入 PlatformInterface 桩, 让 NewNetworkManager
+// 走 platform 分支, 拿到一个空但 nil-safe 的 monitor。
+// direct 出站的 loopback 保护在本 App 不需要——App 自身已用
+// addDisallowedApplication 排除出 VPN, 自身流量不可能回流进 TUN。
+// ---------------------------------------------------------------------------
+
+var (
+	_ adapter.PlatformInterface      = (*androidPlatformStub)(nil)
+	_ tun.DefaultInterfaceMonitor    = (*androidMonitorStub)(nil)
+)
+
+type androidMonitorStub struct{}
+
+func (m *androidMonitorStub) Start() error { return nil }
+func (m *androidMonitorStub) Close() error { return nil }
+func (m *androidMonitorStub) DefaultInterface() *control.Interface { return nil }
+func (m *androidMonitorStub) OverrideAndroidVPN() bool              { return false }
+func (m *androidMonitorStub) AndroidVPNEnabled() bool               { return false }
+func (m *androidMonitorStub) RegisterCallback(callback tun.DefaultInterfaceUpdateCallback) *list.Element[tun.DefaultInterfaceUpdateCallback] {
+	return nil
+}
+func (m *androidMonitorStub) UnregisterCallback(element *list.Element[tun.DefaultInterfaceUpdateCallback]) {
+}
+func (m *androidMonitorStub) RegisterMyInterface(interfaceName string) {}
+func (m *androidMonitorStub) MyInterfaces() []string                    { return nil }
+
+type androidPlatformStub struct{}
+
+func (p *androidPlatformStub) Initialize(networkManager adapter.NetworkManager) error { return nil }
+func (p *androidPlatformStub) UsePlatformAutoDetectInterfaceControl() bool           { return false }
+func (p *androidPlatformStub) AutoDetectInterfaceControl(fd int) error                { return nil }
+func (p *androidPlatformStub) UsePlatformInterface() bool                            { return false }
+func (p *androidPlatformStub) OpenInterface(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
+	return nil, os.ErrInvalid
+}
+func (p *androidPlatformStub) UsePlatformDefaultInterfaceMonitor() bool { return true }
+func (p *androidPlatformStub) CreateDefaultInterfaceMonitor(logger logger.Logger) tun.DefaultInterfaceMonitor {
+	return &androidMonitorStub{}
+}
+func (p *androidPlatformStub) UsePlatformNetworkInterfaces() bool { return false }
+func (p *androidPlatformStub) NetworkInterfaces() ([]adapter.NetworkInterface, error) {
+	return nil, os.ErrInvalid
+}
+func (p *androidPlatformStub) UnderNetworkExtension() bool              { return false }
+func (p *androidPlatformStub) NetworkExtensionIncludeAllNetworks() bool { return false }
+func (p *androidPlatformStub) ClearDNSCache()                          {}
+func (p *androidPlatformStub) RequestPermissionForWIFIState() error    { return nil }
+func (p *androidPlatformStub) ReadWIFIState() adapter.WIFIState        { return adapter.WIFIState{} }
+func (p *androidPlatformStub) SystemCertificates() []string             { return nil }
+func (p *androidPlatformStub) UsePlatformConnectionOwnerFinder() bool  { return false }
+func (p *androidPlatformStub) FindConnectionOwner(request *adapter.FindConnectionOwnerRequest) (*adapter.ConnectionOwner, error) {
+	return nil, os.ErrInvalid
+}
+func (p *androidPlatformStub) UsePlatformWIFIMonitor() bool       { return false }
+func (p *androidPlatformStub) UsePlatformNotification() bool      { return false }
+func (p *androidPlatformStub) SendNotification(notification *adapter.Notification) error {
+	return nil
+}
+func (p *androidPlatformStub) MyInterfaceAddress() []netip.Addr { return nil }
