@@ -102,8 +102,17 @@ func startTun2Socks(tunFd int) (retErr error) {
 
 	_ = syscall.SetNonblock(tunFd, true)
 
-	dev, err := fdbased.Open(strconv.Itoa(tunFd), 1500, 0)
+	// 为 gVisor 单独 dup 一份 fd: Kotlin 侧的 ParcelFileDescriptor 保留原始 fd 的
+	// 所有权, Go 侧关闭时只关闭 dup 出来的 fd。否则两边重复 close 同一个 fd,
+	// 轻则 EBADF 无害, 重则在 fd 号被复用时误关其它资源的 fd, 重连时偶发崩溃。
+	dupFd, err := unix.Dup(tunFd)
 	if err != nil {
+		return fmt.Errorf("复制TUN FD失败: %w", err)
+	}
+
+	dev, err := fdbased.Open(strconv.Itoa(dupFd), 1500, 0)
+	if err != nil {
+		_ = unix.Close(dupFd)
 		return fmt.Errorf("打开TUN设备(FD %d)失败: %w", tunFd, err)
 	}
 
