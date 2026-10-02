@@ -61,35 +61,34 @@ jobs:
       - name: Prepare Release APK Artifact
         run: |
           mkdir -p release_output
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.7.apk \;
+          find app/build/outputs/apk -name "*.apk" -exec cp {} release_output/AndroidProxyClient-v1.2.8.apk \;
           ls -la release_output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AndroidProxyClient-v1.2.7
-          path: release_output/AndroidProxyClient-v1.2.7.apk
+          name: AndroidProxyClient-v1.2.8
+          path: release_output/AndroidProxyClient-v1.2.8.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.2.7
-          name: "Android Proxy Client v1.2.7 (Release - DNS Bootstrap Fix)"
+          tag_name: v1.2.8
+          name: "Android Proxy Client v1.2.8 (Release - Direct Outbound Crash Fix)"
           body: |
-            ## Android Proxy Client v1.2.7
+            ## Android Proxy Client v1.2.8
 
             基于 **SingBox v1.13.20 + gVisor Tun2Socks v2.7.0** 纯用户态架构的开源高性能 Android 代理客户端。
 
-            ### 🚀 关键修复 (v1.2.7)
-            - 🌟 **修复域名节点永远连不上**：v1.2.6 的 `local-dns` (type:local) 在 Android 上实际无效——sing-box 的 local 实现读 `/etc/resolv.conf`，而 Android 没有这个文件，会回退到 `127.0.0.1:53`，节点域名解析永远失败。现改为直连 UDP DNS (`223.5.5.5`) 做 bootstrap，并用精确的 `domain` 规则替代已废弃的 `outbound:any` 写法。
-            - 🌟 **分流模式开关正式生效**：RULE=局域网直连+其余走代理，GLOBAL=全局代理，DIRECT=全局直连（新增 `direct` 出站）。
-            - 🌟 **TUN FD 归属修复**：Go 侧 dup 一份 fd 给 gVisor，避免与 Kotlin 侧重复 close 同一个 fd。
+            ### 🚀 关键修复 (v1.2.8)
+            - 🌟 **修复启动即 panic 闪退**：v1.2.7 新增的 `direct` 出站在 `Start()` 时调 `fetchMyAddresses()`，而普通 Android App 里 Google 禁了 NETLINK_ROUTE，`InterfaceMonitor()` 永远为 nil → 空指针 panic。现向 sing-box 注入 `PlatformInterface` 桩，走 platform 分支拿到空但安全的 monitor（direct 的 loopback 保护在本 App 不需要：自身流量已排除出 VPN，不可能回流）。
+            - 保留 v1.2.7 的全部修复：域名节点 DNS bootstrap（direct-dns 223.5.5.5）、分流模式开关、TUN FD 归属修复。
 
             ### 📥 下载安装
-            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.7.apk` 覆盖安装即可。
+            直接下载下方 Assets 中的 `AndroidProxyClient-v1.2.8.apk` 覆盖安装即可。
           draft: false
           prerelease: false
-          files: release_output/AndroidProxyClient-v1.2.7.apk
+          files: release_output/AndroidProxyClient-v1.2.8.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
